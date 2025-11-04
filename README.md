@@ -49,7 +49,7 @@ A modern, feature-rich Wiki and Knowledge Base application built with React, Nod
 4. **Create your first account**
    - Navigate to http://localhost:3000
    - Click "Register" in the top right
-   - Create an account (first user will be a viewer by default)
+   - Create an account (first user will automatically be an admin)
 
 ### Stopping the Application
 ```bash
@@ -145,14 +145,14 @@ DB_USER=noodlenook
 DB_PASSWORD=noodlenook123
 ```
 
-### Changing User Roles
+### Managing User Roles
 
-To change a user's role, connect to the database and run:
-```sql
-UPDATE users SET role = 'editor' WHERE username = 'your-username';
--- or
-UPDATE users SET role = 'admin' WHERE username = 'your-username';
-```
+User roles can be managed through the Admin Dashboard:
+1. Log in as an admin user
+2. Click the "Admin" button in the top navigation
+3. Use the dropdown menus to change user roles
+
+**Note**: The first registered user automatically receives admin privileges. Additional admins can be created by existing admins through the Admin Dashboard.
 
 ## 🛠️ Development
 

@@ -171,6 +171,13 @@ function Header() {
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
               {user.username} ({user.role})
             </span>
+            {user.role === 'admin' && (
+              <Link to="/admin">
+                <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem' }}>
+                  Admin
+                </button>
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="btn-danger"

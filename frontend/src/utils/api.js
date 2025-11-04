@@ -31,4 +31,9 @@ export const search = {
   query: (q) => api.get('/search', { params: { q } }),
 };
 
+export const users = {
+  getAll: () => api.get('/users'),
+  updateRole: (id, role) => api.put(`/users/${id}/role`, { role }),
+};
+
 export default api;
