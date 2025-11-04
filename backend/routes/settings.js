@@ -1,32 +1,9 @@
 const express = require('express');
-const crypto = require('crypto');
 const pool = require('../db');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { encrypt, decrypt } = require('../utils/encryption');
 
 const router = express.Router();
-
-// Encryption key from environment or generate one
-const ENCRYPTION_KEY = process.env.SETTINGS_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
-const ALGORITHM = 'aes-256-ctr';
-
-// Simple encryption for sensitive settings
-function encrypt(text) {
-  if (!text) return null;
-  const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'), iv);
-  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
-}
-
-function decrypt(text) {
-  if (!text) return null;
-  const parts = text.split(':');
-  const iv = Buffer.from(parts.shift(), 'hex');
-  const encryptedText = Buffer.from(parts.join(':'), 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'), iv);
-  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
-  return decrypted.toString();
-}
 
 // Get all settings (admin only)
 router.get('/', authenticateToken, authorizeRole('admin'), async (req, res) => {

@@ -110,6 +110,16 @@ function SettingsPage() {
     setSuccess('');
 
     try {
+      // Validate webhook headers if provided
+      if (webhookHeaders) {
+        try {
+          JSON.parse(webhookHeaders);
+        } catch (err) {
+          setError('Invalid JSON in webhook headers. Please check the format.');
+          return;
+        }
+      }
+
       await settingsApi.update('webhook_url', webhookUrl, false);
       await settingsApi.update('webhook_headers', webhookHeaders, false);
 

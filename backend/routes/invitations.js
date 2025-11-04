@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { decrypt } = require('../utils/encryption');
 
 const router = express.Router();
 
@@ -18,22 +19,9 @@ async function getSetting(key) {
 
   const setting = result.rows[0];
   
-  // Decrypt if encrypted (simplified decryption - matches settings.js)
+  // Decrypt if encrypted
   if (setting.encrypted && setting.value) {
-    const ENCRYPTION_KEY = process.env.SETTINGS_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
-    const ALGORITHM = 'aes-256-ctr';
-    
-    try {
-      const parts = setting.value.split(':');
-      const iv = Buffer.from(parts.shift(), 'hex');
-      const encryptedText = Buffer.from(parts.join(':'), 'hex');
-      const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'), iv);
-      const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
-      return decrypted.toString();
-    } catch (err) {
-      console.error('Error decrypting setting:', err);
-      return null;
-    }
+    return decrypt(setting.value);
   }
   
   return setting.value;
