@@ -145,6 +145,14 @@ DB_USER=noodlenook
 DB_PASSWORD=noodlenook123
 ```
 
+### Running Behind a Reverse Proxy
+
+For production deployments, it's recommended to run NoodleNook behind a reverse proxy. See [REVERSE_PROXY.md](REVERSE_PROXY.md) for detailed guides on:
+- Nginx Reverse Proxy Manager
+- Nginx Reverse Proxy
+- Traefik
+- Caddy
+
 ### Managing User Roles
 
 User roles can be managed through the Admin Dashboard:
