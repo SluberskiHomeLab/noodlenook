@@ -126,8 +126,8 @@ router.put('/order/:slug', authenticateToken, authorizeRole('admin'), async (req
   try {
     const { display_order } = req.body;
     
-    if (display_order === undefined) {
-      return res.status(400).json({ error: 'display_order is required' });
+    if (typeof display_order !== 'number' || display_order < 0) {
+      return res.status(400).json({ error: 'display_order must be a non-negative number' });
     }
 
     const result = await pool.query(

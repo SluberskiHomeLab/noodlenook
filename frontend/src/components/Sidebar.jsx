@@ -60,10 +60,11 @@ function Sidebar() {
         newPages.splice(draggedIndex, 1);
         newPages.splice(targetIndex, 0, draggedPage);
         
-        // Update display_order for all affected pages
-        for (let i = 0; i < newPages.length; i++) {
-          await pages.updateOrder(newPages[i].slug, i);
-        }
+        // Update display_order for all affected pages using Promise.all for concurrent updates
+        const updatePromises = newPages.map((page, index) => 
+          pages.updateOrder(page.slug, index)
+        );
+        await Promise.all(updatePromises);
         
         setAllPages(newPages);
       } catch (error) {
