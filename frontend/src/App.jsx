@@ -11,6 +11,7 @@ import PageEditor from './pages/PageEditor';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import SearchPage from './pages/SearchPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 import { auth } from './utils/api';
 
@@ -148,6 +149,14 @@ function App() {
                   element={
                     user && (user.role === 'editor' || user.role === 'admin') 
                       ? <PageEditor /> 
+                      : <Navigate to="/" />
+                  } 
+                />
+                <Route 
+                  path="/admin" 
+                  element={
+                    user && user.role === 'admin' 
+                      ? <AdminDashboard /> 
                       : <Navigate to="/" />
                   } 
                 />
