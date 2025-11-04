@@ -1,33 +1,38 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
+
+// Helper function to check if request is authenticated
+const isAuthenticated = (req) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) return false;
+  
+  try {
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
 
 // Get all pages
 router.get('/', async (req, res) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    let isAuthenticated = false;
-
-    // Check if user is authenticated
-    if (token) {
-      try {
-        const jwt = require('jsonwebtoken');
-        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
-        isAuthenticated = true;
-      } catch (err) {
-        // Token invalid or expired, treat as unauthenticated
-      }
-    }
+    const authenticated = isAuthenticated(req);
 
     // If authenticated, show all published pages. If not, show only public pages.
+    const whereClause = authenticated ? 'p.is_published = true' : 'p.is_published = true AND p.is_public = true';
+    
     const result = await pool.query(`
       SELECT p.*, u.username as author_name 
       FROM pages p 
       LEFT JOIN users u ON p.author_id = u.id 
-      WHERE p.is_published = true ${isAuthenticated ? '' : 'AND p.is_public = true'}
+      WHERE ${whereClause}
       ORDER BY p.updated_at DESC
     `);
     res.json(result.rows);
@@ -40,27 +45,16 @@ router.get('/', async (req, res) => {
 // Get single page by slug
 router.get('/:slug', async (req, res) => {
   try {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    let isAuthenticated = false;
-
-    // Check if user is authenticated
-    if (token) {
-      try {
-        const jwt = require('jsonwebtoken');
-        jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
-        isAuthenticated = true;
-      } catch (err) {
-        // Token invalid or expired, treat as unauthenticated
-      }
-    }
+    const authenticated = isAuthenticated(req);
 
     // If authenticated, show all published pages. If not, show only public pages.
+    const whereClause = authenticated ? 'p.slug = $1 AND p.is_published = true' : 'p.slug = $1 AND p.is_published = true AND p.is_public = true';
+    
     const result = await pool.query(`
       SELECT p.*, u.username as author_name 
       FROM pages p 
       LEFT JOIN users u ON p.author_id = u.id 
-      WHERE p.slug = $1 AND p.is_published = true ${isAuthenticated ? '' : 'AND p.is_public = true'}
+      WHERE ${whereClause}
     `, [req.params.slug]);
 
     if (result.rows.length === 0) {

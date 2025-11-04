@@ -72,8 +72,9 @@ router.post('/', authenticateToken, authorizeRole('admin'), async (req, res) => 
 
     const invitation = result.rows[0];
 
-    // Generate invitation link
-    const invitationLink = `${req.protocol}://${req.get('host')}/register?token=${token}`;
+    // Generate invitation link using BASE_URL from env or fallback to request host
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const invitationLink = `${baseUrl}/register?token=${token}`;
 
     // Send notification based on method
     if (method === 'smtp') {
