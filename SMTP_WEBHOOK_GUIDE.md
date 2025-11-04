@@ -307,10 +307,11 @@ After configuration, test the full flow:
 Add these to your backend `.env` file for enhanced security:
 
 ```env
-# Optional: Encryption key for settings (auto-generated if not provided)
+# REQUIRED: Encryption key for settings (generate new key for production)
 SETTINGS_ENCRYPTION_KEY=your-64-character-hex-string
 
-# Optional: Base URL for invitation links
+# REQUIRED for production: Base URL for invitation links
+# This prevents host header injection attacks
 BASE_URL=https://your-noodlenook-domain.com
 ```
 
@@ -318,6 +319,15 @@ Generate a secure encryption key:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+### Security Notes
+
+1. **BASE_URL**: Always set this in production to prevent host header injection attacks. Without it, attackers could manipulate invitation links.
+2. **SETTINGS_ENCRYPTION_KEY**: Required for encrypted storage of SMTP passwords and other sensitive settings. Generate a new key for each installation.
+3. **Webhook URLs**: The system validates webhook URLs to prevent Server-Side Request Forgery (SSRF) attacks:
+   - Only HTTP/HTTPS protocols allowed
+   - Private network addresses (localhost, 192.168.x.x, etc.) are blocked in the test endpoint
+   - Timeout and redirect protection enabled
 
 ## Best Practices
 

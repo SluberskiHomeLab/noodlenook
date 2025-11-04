@@ -144,9 +144,13 @@ DB_PORT=5432
 DB_NAME=noodlenook
 DB_USER=noodlenook
 DB_PASSWORD=noodlenook123
+SETTINGS_ENCRYPTION_KEY=generate-with-node-crypto
 ```
 
-**Note:** `BASE_URL` is optional but recommended for invitation links. If not set, the application will use the request host.
+**Important Security Notes:**
+- `BASE_URL` is **required in production** to prevent host header injection attacks on invitation links
+- `SETTINGS_ENCRYPTION_KEY` is **required** for encrypted storage of SMTP passwords. Generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
+- `JWT_SECRET` should be changed to a strong random value in production
 
 ### Running Behind a Reverse Proxy
 
