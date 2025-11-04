@@ -9,6 +9,7 @@ function PageEditor() {
   const [content, setContent] = useState('');
   const [pageSlug, setPageSlug] = useState('');
   const [contentType, setContentType] = useState('markdown');
+  const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -29,6 +30,7 @@ function PageEditor() {
       setContent(page.content);
       setPageSlug(page.slug);
       setContentType(page.content_type);
+      setCategory(page.category || '');
     } catch (err) {
       setError('Failed to load page');
     }
@@ -56,9 +58,9 @@ function PageEditor() {
 
     try {
       if (isEditMode) {
-        await pages.update(slug, { title, content, content_type: contentType });
+        await pages.update(slug, { title, content, content_type: contentType, category });
       } else {
-        await pages.create({ title, slug: pageSlug, content, content_type: contentType });
+        await pages.create({ title, slug: pageSlug, content, content_type: contentType, category });
       }
       navigate(`/page/${pageSlug}`);
     } catch (err) {
@@ -158,6 +160,24 @@ function PageEditor() {
               />
             </div>
           )}
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ 
+              display: 'block', 
+              marginBottom: '0.5rem',
+              fontWeight: '500',
+              color: 'var(--text-primary)'
+            }}>
+              Category (optional)
+            </label>
+            <input
+              type="text"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              disabled={loading}
+              placeholder="e.g., Documentation, Guides, Tutorials"
+            />
+          </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ 

@@ -53,7 +53,7 @@ function Header() {
             background: 'transparent',
             color: 'var(--text-primary)',
             padding: '0.5rem',
-            borderRadius: '0.375rem',
+            borderRadius: '0.75rem',
           }}
           className="btn-secondary"
         >
@@ -93,7 +93,7 @@ function Header() {
             style={{
               width: '100%',
               padding: '0.5rem 0.75rem 0.5rem 2.5rem',
-              borderRadius: '0.5rem',
+              borderRadius: '0.75rem',
               border: '1px solid var(--border-color)',
               backgroundColor: 'var(--bg-secondary)',
               color: 'var(--text-primary)',
@@ -106,7 +106,7 @@ function Header() {
         <button
           onClick={toggleDarkMode}
           className="btn-secondary"
-          style={{ padding: '0.5rem', borderRadius: '0.375rem' }}
+          style={{ padding: '0.5rem', borderRadius: '0.75rem' }}
           title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -116,7 +116,7 @@ function Header() {
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="btn-secondary"
-            style={{ padding: '0.5rem', borderRadius: '0.375rem' }}
+            style={{ padding: '0.5rem', borderRadius: '0.75rem' }}
             title="Settings"
           >
             <Settings size={20} />
@@ -130,7 +130,7 @@ function Header() {
               marginTop: '0.5rem',
               backgroundColor: 'var(--bg-primary)',
               border: '1px solid var(--border-color)',
-              borderRadius: '0.5rem',
+              borderRadius: '0.75rem',
               padding: '1rem',
               minWidth: '200px',
               boxShadow: 'var(--shadow-lg)',
@@ -142,21 +142,21 @@ function Header() {
                   <button
                     onClick={() => changeSidebarPosition('left')}
                     className={sidebarPosition === 'left' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem' }}
+                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
                   >
                     <PanelLeftClose size={16} />
                   </button>
                   <button
                     onClick={() => changeSidebarPosition('right')}
                     className={sidebarPosition === 'right' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem' }}
+                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
                   >
                     <PanelRightClose size={16} />
                   </button>
                   <button
                     onClick={() => changeSidebarPosition('top')}
                     className={sidebarPosition === 'top' ? 'btn-primary' : 'btn-secondary'}
-                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem' }}
+                    style={{ padding: '0.375rem 0.5rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
                   >
                     <PanelTopClose size={16} />
                   </button>
@@ -173,7 +173,7 @@ function Header() {
             </span>
             {user.role === 'admin' && (
               <Link to="/admin">
-                <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem' }}>
+                <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem' }}>
                   Admin
                 </button>
               </Link>
@@ -181,7 +181,7 @@ function Header() {
             <button
               onClick={handleLogout}
               className="btn-danger"
-              style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem' }}
+              style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem' }}
             >
               <LogOut size={18} />
               Logout
@@ -189,7 +189,7 @@ function Header() {
           </>
         ) : (
           <Link to="/login">
-            <button className="btn-primary" style={{ padding: '0.5rem 1rem', borderRadius: '0.375rem' }}>
+            <button className="btn-primary" style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem' }}>
               Login
             </button>
           </Link>

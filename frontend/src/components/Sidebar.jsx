@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Plus, Home, List } from 'lucide-react';
+import { FileText, Plus, Home, List, FolderOpen, Clock, User, GripVertical } from 'lucide-react';
 import { pages } from '../utils/api';
 import { useApp } from '../App';
 
@@ -8,10 +8,19 @@ function Sidebar() {
   const [allPages, setAllPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user, sidebarPosition, tocStyle, changeTocStyle } = useApp();
+  const [sortBy, setSortBy] = useState(() => {
+    const saved = localStorage.getItem('sortBy');
+    return saved || 'alphabetical';
+  });
+  const [draggedPage, setDraggedPage] = useState(null);
 
   useEffect(() => {
     loadPages();
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sortBy', sortBy);
+  }, [sortBy]);
 
   const loadPages = async () => {
     try {
@@ -24,9 +33,90 @@ function Sidebar() {
     }
   };
 
+  const handleDragStart = (e, page) => {
+    if (user && user.role === 'admin') {
+      setDraggedPage(page);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDragOver = (e) => {
+    if (user && user.role === 'admin') {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    }
+  };
+
+  const handleDrop = async (e, targetPage) => {
+    e.preventDefault();
+    if (user && user.role === 'admin' && draggedPage && draggedPage.id !== targetPage.id) {
+      try {
+        // Update the order in the backend
+        const draggedIndex = allPages.findIndex(p => p.id === draggedPage.id);
+        const targetIndex = allPages.findIndex(p => p.id === targetPage.id);
+        
+        // Create a new array with updated order
+        const newPages = [...allPages];
+        newPages.splice(draggedIndex, 1);
+        newPages.splice(targetIndex, 0, draggedPage);
+        
+        // Update display_order for all affected pages using Promise.all for concurrent updates
+        const updatePromises = newPages.map((page, index) => 
+          pages.updateOrder(page.slug, index)
+        );
+        await Promise.all(updatePromises);
+        
+        setAllPages(newPages);
+      } catch (error) {
+        console.error('Error updating page order:', error);
+      }
+    }
+    setDraggedPage(null);
+  };
+
+  const getSortedPages = () => {
+    let sorted = [...allPages];
+    
+    switch (sortBy) {
+      case 'category':
+        sorted.sort((a, b) => {
+          const catA = a.category || 'Uncategorized';
+          const catB = b.category || 'Uncategorized';
+          if (catA === catB) {
+            return a.title.localeCompare(b.title);
+          }
+          return catA.localeCompare(catB);
+        });
+        break;
+      case 'recent':
+        sorted.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        break;
+      case 'creator':
+        sorted.sort((a, b) => {
+          const authorA = a.author_name || 'Unknown';
+          const authorB = b.author_name || 'Unknown';
+          if (authorA === authorB) {
+            return a.title.localeCompare(b.title);
+          }
+          return authorA.localeCompare(authorB);
+        });
+        break;
+      case 'custom':
+        sorted.sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+        break;
+      case 'alphabetical':
+      default:
+        sorted.sort((a, b) => a.title.localeCompare(b.title));
+        break;
+    }
+    
+    return sorted;
+  };
+
   const groupPagesByFirstLetter = () => {
     const grouped = {};
-    allPages.forEach(page => {
+    const sortedPages = getSortedPages();
+    sortedPages.forEach(page => {
       if (!page.title || page.title.length === 0) return;
       const firstLetter = page.title[0].toUpperCase();
       if (!grouped[firstLetter]) {
@@ -37,74 +127,125 @@ function Sidebar() {
     return grouped;
   };
 
+  const groupPagesByCategory = () => {
+    const grouped = {};
+    const sortedPages = getSortedPages();
+    sortedPages.forEach(page => {
+      const category = page.category || 'Uncategorized';
+      if (!grouped[category]) {
+        grouped[category] = [];
+      }
+      grouped[category].push(page);
+    });
+    return grouped;
+  };
+
+  const groupPagesByCreator = () => {
+    const grouped = {};
+    const sortedPages = getSortedPages();
+    sortedPages.forEach(page => {
+      const creator = page.author_name || 'Unknown';
+      if (!grouped[creator]) {
+        grouped[creator] = [];
+      }
+      grouped[creator].push(page);
+    });
+    return grouped;
+  };
+
+  const renderPageLink = (page, draggable = false) => (
+    <Link
+      key={page.id}
+      to={`/page/${page.slug}`}
+      draggable={draggable}
+      onDragStart={(e) => handleDragStart(e, page)}
+      onDragOver={handleDragOver}
+      onDrop={(e) => handleDrop(e, page)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        padding: '0.5rem 0.75rem',
+        borderRadius: '0.5rem',
+        marginBottom: '0.25rem',
+        marginLeft: sortBy === 'category' || sortBy === 'creator' || tocStyle === 'nested' ? '1rem' : '0',
+        color: 'var(--text-primary)',
+        transition: 'background-color 0.2s ease',
+        cursor: draggable ? 'grab' : 'pointer',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'transparent';
+      }}
+    >
+      {draggable && user && user.role === 'admin' && <GripVertical size={14} style={{ opacity: 0.5 }} />}
+      <FileText size={16} />
+      <span style={{ fontSize: '0.875rem' }}>{page.title}</span>
+    </Link>
+  );
+
   const renderNestedList = () => {
-    const grouped = groupPagesByFirstLetter();
-    return Object.entries(grouped).sort().map(([letter, pages]) => (
-      <div key={letter} style={{ marginBottom: '1rem' }}>
-        <div style={{ 
-          fontWeight: 'bold', 
-          color: 'var(--primary-color)', 
-          marginBottom: '0.5rem',
-          fontSize: '1.1rem'
-        }}>
-          {letter}
+    if (sortBy === 'category') {
+      const grouped = groupPagesByCategory();
+      return Object.entries(grouped).sort().map(([category, pages]) => (
+        <div key={category} style={{ marginBottom: '1rem' }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            color: 'var(--primary-color)', 
+            marginBottom: '0.5rem',
+            fontSize: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <FolderOpen size={16} />
+            {category}
+          </div>
+          {pages.map(page => renderPageLink(page, sortBy === 'custom'))}
         </div>
-        {pages.map(page => (
-          <Link
-            key={page.id}
-            to={`/page/${page.slug}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 0.75rem',
-              borderRadius: '0.375rem',
-              marginBottom: '0.25rem',
-              marginLeft: '1rem',
-              color: 'var(--text-primary)',
-              transition: 'background-color 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-            }}
-          >
-            <FileText size={16} />
-            <span style={{ fontSize: '0.875rem' }}>{page.title}</span>
-          </Link>
-        ))}
-      </div>
-    ));
+      ));
+    } else if (sortBy === 'creator') {
+      const grouped = groupPagesByCreator();
+      return Object.entries(grouped).sort().map(([creator, pages]) => (
+        <div key={creator} style={{ marginBottom: '1rem' }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            color: 'var(--primary-color)', 
+            marginBottom: '0.5rem',
+            fontSize: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <User size={16} />
+            {creator}
+          </div>
+          {pages.map(page => renderPageLink(page, sortBy === 'custom'))}
+        </div>
+      ));
+    } else {
+      const grouped = groupPagesByFirstLetter();
+      return Object.entries(grouped).sort().map(([letter, pages]) => (
+        <div key={letter} style={{ marginBottom: '1rem' }}>
+          <div style={{ 
+            fontWeight: 'bold', 
+            color: 'var(--primary-color)', 
+            marginBottom: '0.5rem',
+            fontSize: '1.1rem'
+          }}>
+            {letter}
+          </div>
+          {pages.map(page => renderPageLink(page, sortBy === 'custom'))}
+        </div>
+      ));
+    }
   };
 
   const renderFlatList = () => {
-    return allPages.map(page => (
-      <Link
-        key={page.id}
-        to={`/page/${page.slug}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.5rem 0.75rem',
-          borderRadius: '0.375rem',
-          marginBottom: '0.25rem',
-          color: 'var(--text-primary)',
-          transition: 'background-color 0.2s ease',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'transparent';
-        }}
-      >
-        <FileText size={16} />
-        <span style={{ fontSize: '0.875rem' }}>{page.title}</span>
-      </Link>
-    ));
+    const sortedPages = getSortedPages();
+    return sortedPages.map(page => renderPageLink(page, sortBy === 'custom'));
   };
 
   return (
@@ -155,7 +296,7 @@ function Sidebar() {
             <button
               onClick={() => changeTocStyle('flat')}
               className={tocStyle === 'flat' ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '0.25rem', fontSize: '0.75rem' }}
+              style={{ padding: '0.25rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
               title="Flat list"
             >
               <List size={14} />
@@ -163,12 +304,44 @@ function Sidebar() {
             <button
               onClick={() => changeTocStyle('nested')}
               className={tocStyle === 'nested' ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '0.25rem', fontSize: '0.75rem' }}
-              title="Grouped by letter"
+              style={{ padding: '0.25rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
+              title="Grouped view"
             >
               A-Z
             </button>
           </div>
+        </div>
+
+        <div style={{ marginBottom: '0.75rem' }}>
+          <label style={{ 
+            fontSize: '0.75rem', 
+            color: 'var(--text-secondary)', 
+            marginBottom: '0.25rem',
+            display: 'block'
+          }}>
+            Sort by:
+          </label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.4rem',
+              borderRadius: '0.5rem',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              fontSize: '0.875rem',
+            }}
+          >
+            <option value="alphabetical">Alphabetical</option>
+            <option value="category">Category</option>
+            <option value="recent">Recently Created</option>
+            <option value="creator">Creator</option>
+            {user && user.role === 'admin' && (
+              <option value="custom">Custom Order (Drag)</option>
+            )}
+          </select>
         </div>
 
         {loading ? (

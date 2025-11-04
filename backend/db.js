@@ -33,6 +33,8 @@ const initDB = async () => {
         slug VARCHAR(255) UNIQUE NOT NULL,
         content TEXT NOT NULL,
         content_type VARCHAR(20) DEFAULT 'markdown',
+        category VARCHAR(100),
+        display_order INTEGER DEFAULT 0,
         author_id INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -45,6 +47,21 @@ const initDB = async () => {
       CREATE INDEX IF NOT EXISTS pages_search_idx 
       ON pages 
       USING gin(to_tsvector('english', title || ' ' || content))
+    `);
+
+    // Add category and display_order columns if they don't exist (migration)
+    await client.query(`
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='pages' AND column_name='category') THEN
+          ALTER TABLE pages ADD COLUMN category VARCHAR(100);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='pages' AND column_name='display_order') THEN
+          ALTER TABLE pages ADD COLUMN display_order INTEGER DEFAULT 0;
+        END IF;
+      END $$;
     `);
 
     // Page revisions table
