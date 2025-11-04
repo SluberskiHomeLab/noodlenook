@@ -27,6 +27,18 @@ async function getSetting(key) {
   return setting.value;
 }
 
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
 // Helper function to send email via SMTP
 async function sendInvitationEmail(email, invitationLink, role) {
   try {
@@ -54,6 +66,10 @@ async function sendInvitationEmail(email, invitationLink, role) {
       } : undefined
     });
 
+    // Escape values to prevent XSS
+    const safeRole = escapeHtml(role);
+    const safeLink = escapeHtml(invitationLink);
+
     const mailOptions = {
       from: smtpFrom || smtpUser,
       to: email,
@@ -61,11 +77,11 @@ async function sendInvitationEmail(email, invitationLink, role) {
       text: `You've been invited to join NoodleNook as a ${role}.\n\nClick the link below to accept your invitation:\n${invitationLink}\n\nThis invitation will expire in 7 days.`,
       html: `
         <h2>You're invited to join NoodleNook</h2>
-        <p>You've been invited to join NoodleNook as a <strong>${role}</strong>.</p>
+        <p>You've been invited to join NoodleNook as a <strong>${safeRole}</strong>.</p>
         <p>Click the link below to accept your invitation:</p>
-        <p><a href="${invitationLink}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Accept Invitation</a></p>
+        <p><a href="${safeLink}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Accept Invitation</a></p>
         <p>Or copy and paste this URL into your browser:</p>
-        <p>${invitationLink}</p>
+        <p>${safeLink}</p>
         <p><em>This invitation will expire in 7 days.</em></p>
       `
     };
@@ -108,7 +124,13 @@ async function sendWebhookNotification(email, invitationLink, role) {
       }
     }
 
-    await axios.post(webhookUrl, payload, { headers });
+    const config = {
+      headers,
+      timeout: 10000, // 10 second timeout
+      maxRedirects: 0 // Don't follow redirects
+    };
+
+    await axios.post(webhookUrl, payload, config);
     return { success: true };
   } catch (error) {
     console.error('Error sending webhook:', error);
@@ -183,7 +205,10 @@ router.post('/', authenticateToken, authorizeRole('admin'), async (req, res) => 
 
     const invitation = result.rows[0];
 
-    // Generate invitation link using BASE_URL from env or fallback to request host
+    // Generate invitation link - BASE_URL should be set in production
+    if (!process.env.BASE_URL) {
+      console.warn('WARNING: BASE_URL not set in environment. Using request host which may be vulnerable to host header injection.');
+    }
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     const invitationLink = `${baseUrl}/register?token=${token}`;
 

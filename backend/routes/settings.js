@@ -145,6 +145,49 @@ router.post('/test-webhook', authenticateToken, authorizeRole('admin'), async (r
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    // Validate URL to prevent SSRF attacks
+    try {
+      const parsedUrl = new URL(url);
+      
+      // Only allow HTTPS for production webhooks (allow HTTP for testing)
+      if (parsedUrl.protocol !== 'https:' && parsedUrl.protocol !== 'http:') {
+        return res.status(400).json({ error: 'Only HTTP and HTTPS URLs are allowed' });
+      }
+      
+      // Prevent requests to private/local networks
+      const hostname = parsedUrl.hostname.toLowerCase();
+      const privateNetworks = [
+        'localhost',
+        '127.0.0.1',
+        '0.0.0.0',
+        '10.',
+        '172.16.',
+        '172.17.',
+        '172.18.',
+        '172.19.',
+        '172.20.',
+        '172.21.',
+        '172.22.',
+        '172.23.',
+        '172.24.',
+        '172.25.',
+        '172.26.',
+        '172.27.',
+        '172.28.',
+        '172.29.',
+        '172.30.',
+        '172.31.',
+        '192.168.',
+        '169.254.'
+      ];
+      
+      if (privateNetworks.some(net => hostname.startsWith(net))) {
+        return res.status(400).json({ error: 'Requests to private/local networks are not allowed' });
+      }
+    } catch (err) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
     const axios = require('axios');
     
     const testPayload = {
@@ -154,7 +197,9 @@ router.post('/test-webhook', authenticateToken, authorizeRole('admin'), async (r
     };
 
     const config = {
-      headers: headers || {}
+      headers: headers || {},
+      timeout: 5000, // 5 second timeout
+      maxRedirects: 0 // Don't follow redirects to prevent SSRF
     };
 
     const response = await axios.post(url, testPayload, config);
