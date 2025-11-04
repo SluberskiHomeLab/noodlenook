@@ -1,0 +1,199 @@
+const express = require('express');
+const crypto = require('crypto');
+const pool = require('../db');
+const { authenticateToken, authorizeRole } = require('../middleware/auth');
+
+const router = express.Router();
+
+// Encryption key from environment or generate one
+const ENCRYPTION_KEY = process.env.SETTINGS_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+const ALGORITHM = 'aes-256-ctr';
+
+// Simple encryption for sensitive settings
+function encrypt(text) {
+  if (!text) return null;
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'), iv);
+  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+  return iv.toString('hex') + ':' + encrypted.toString('hex');
+}
+
+function decrypt(text) {
+  if (!text) return null;
+  const parts = text.split(':');
+  const iv = Buffer.from(parts.shift(), 'hex');
+  const encryptedText = Buffer.from(parts.join(':'), 'hex');
+  const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY.slice(0, 64), 'hex'), iv);
+  const decrypted = Buffer.concat([decipher.update(encryptedText), decipher.final()]);
+  return decrypted.toString();
+}
+
+// Get all settings (admin only)
+router.get('/', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT key, value, encrypted, updated_at 
+      FROM system_settings 
+      ORDER BY key
+    `);
+    
+    // Decrypt sensitive values for display
+    const settings = result.rows.map(setting => ({
+      ...setting,
+      value: setting.encrypted && setting.value ? decrypt(setting.value) : setting.value
+    }));
+    
+    res.json(settings);
+  } catch (error) {
+    console.error('Error fetching settings:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get a specific setting
+router.get('/:key', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const result = await pool.query(
+      'SELECT key, value, encrypted FROM system_settings WHERE key = $1',
+      [key]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Setting not found' });
+    }
+
+    const setting = result.rows[0];
+    if (setting.encrypted && setting.value) {
+      setting.value = decrypt(setting.value);
+    }
+
+    res.json(setting);
+  } catch (error) {
+    console.error('Error fetching setting:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update or create a setting (admin only)
+router.put('/:key', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    const { value, encrypted } = req.body;
+
+    const finalValue = encrypted && value ? encrypt(value) : value;
+
+    const result = await pool.query(`
+      INSERT INTO system_settings (key, value, encrypted, updated_by, updated_at) 
+      VALUES ($1, $2, $3, $4, NOW())
+      ON CONFLICT (key) 
+      DO UPDATE SET 
+        value = $2,
+        encrypted = $3,
+        updated_by = $4,
+        updated_at = NOW()
+      RETURNING key, value, encrypted, updated_at
+    `, [key, finalValue, encrypted || false, req.user.id]);
+
+    const setting = result.rows[0];
+    if (setting.encrypted && setting.value) {
+      setting.value = decrypt(setting.value);
+    }
+
+    res.json(setting);
+  } catch (error) {
+    console.error('Error updating setting:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Delete a setting (admin only)
+router.delete('/:key', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    const result = await pool.query(
+      'DELETE FROM system_settings WHERE key = $1 RETURNING key',
+      [key]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Setting not found' });
+    }
+
+    res.json({ message: 'Setting deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting setting:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Test SMTP connection (admin only)
+router.post('/test-smtp', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { host, port, secure, user, pass, from } = req.body;
+    
+    // Import nodemailer dynamically
+    const nodemailer = require('nodemailer');
+
+    const transporter = nodemailer.createTransport({
+      host: host,
+      port: parseInt(port),
+      secure: secure === 'true' || secure === true,
+      auth: user && pass ? {
+        user: user,
+        pass: pass
+      } : undefined
+    });
+
+    // Verify connection
+    await transporter.verify();
+
+    res.json({ success: true, message: 'SMTP connection successful' });
+  } catch (error) {
+    console.error('SMTP test error:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: 'SMTP connection failed: ' + error.message 
+    });
+  }
+});
+
+// Test webhook (admin only)
+router.post('/test-webhook', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { url, headers } = req.body;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    const axios = require('axios');
+    
+    const testPayload = {
+      test: true,
+      message: 'This is a test webhook from NoodleNook',
+      timestamp: new Date().toISOString()
+    };
+
+    const config = {
+      headers: headers || {}
+    };
+
+    const response = await axios.post(url, testPayload, config);
+
+    res.json({ 
+      success: true, 
+      message: 'Webhook test successful',
+      status: response.status 
+    });
+  } catch (error) {
+    console.error('Webhook test error:', error);
+    res.status(400).json({ 
+      success: false, 
+      error: 'Webhook test failed: ' + (error.response?.data || error.message)
+    });
+  }
+});
+
+module.exports = router;

@@ -12,6 +12,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import SearchPage from './pages/SearchPage';
 import AdminDashboard from './pages/AdminDashboard';
+import SettingsPage from './pages/SettingsPage';
 
 import { auth } from './utils/api';
 
@@ -158,6 +159,14 @@ function App() {
                   element={
                     user && user.role === 'admin' 
                       ? <AdminDashboard /> 
+                      : <Navigate to="/" />
+                  } 
+                />
+                <Route 
+                  path="/settings" 
+                  element={
+                    user && user.role === 'admin' 
+                      ? <SettingsPage /> 
                       : <Navigate to="/" />
                   } 
                 />

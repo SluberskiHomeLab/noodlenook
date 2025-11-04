@@ -156,6 +156,15 @@ For production deployments, it's recommended to run NoodleNook behind a reverse 
 - Traefik
 - Caddy
 
+### SMTP and Webhook Configuration
+
+NoodleNook supports automated user invitations via SMTP email and webhooks. See [SMTP_WEBHOOK_GUIDE.md](SMTP_WEBHOOK_GUIDE.md) for detailed setup instructions:
+- SMTP configuration (Gmail, SendGrid, Mailgun, etc.)
+- Webhook integration (Discord, Slack, custom endpoints)
+- Testing and troubleshooting
+
+Configure these integrations through the Admin Dashboard → System Settings.
+
 ### Managing User Roles
 
 User roles can be managed through the Admin Dashboard:

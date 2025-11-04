@@ -44,4 +44,13 @@ export const invitations = {
   delete: (id) => api.delete(`/invitations/${id}`),
 };
 
+export const settings = {
+  getAll: () => api.get('/settings'),
+  get: (key) => api.get(`/settings/${key}`),
+  update: (key, value, encrypted) => api.put(`/settings/${key}`, { value, encrypted }),
+  delete: (key) => api.delete(`/settings/${key}`),
+  testSmtp: (config) => api.post('/settings/test-smtp', config),
+  testWebhook: (config) => api.post('/settings/test-webhook', config),
+};
+
 export default api;
