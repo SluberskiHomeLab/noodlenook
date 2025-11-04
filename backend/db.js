@@ -1,0 +1,89 @@
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  host: process.env.DB_HOST || 'postgres',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'noodlenook',
+  user: process.env.DB_USER || 'noodlenook',
+  password: process.env.DB_PASSWORD || 'noodlenook123',
+});
+
+// Initialize database tables
+const initDB = async () => {
+  const client = await pool.connect();
+  try {
+    // Users table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) DEFAULT 'viewer',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Pages table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pages (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        slug VARCHAR(255) UNIQUE NOT NULL,
+        content TEXT NOT NULL,
+        content_type VARCHAR(20) DEFAULT 'markdown',
+        author_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_published BOOLEAN DEFAULT true
+      )
+    `);
+
+    // Create full-text search index
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS pages_search_idx 
+      ON pages 
+      USING gin(to_tsvector('english', title || ' ' || content))
+    `);
+
+    // Page revisions table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS page_revisions (
+        id SERIAL PRIMARY KEY,
+        page_id INTEGER REFERENCES pages(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        author_id INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Tags table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(50) UNIQUE NOT NULL
+      )
+    `);
+
+    // Page tags junction table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS page_tags (
+        page_id INTEGER REFERENCES pages(id) ON DELETE CASCADE,
+        tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
+        PRIMARY KEY (page_id, tag_id)
+      )
+    `);
+
+    console.log('Database initialized successfully');
+  } catch (err) {
+    console.error('Error initializing database:', err);
+  } finally {
+    client.release();
+  }
+};
+
+// Call initDB on startup
+initDB();
+
+module.exports = pool;
