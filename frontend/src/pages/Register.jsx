@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { auth } from '../utils/api';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { auth, invitations as invitationsApi } from '../utils/api';
 import { useApp } from '../App';
 import { UserPlus } from 'lucide-react';
 
 function Register() {
+  const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get('token');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [invitationInfo, setInvitationInfo] = useState(null);
   const navigate = useNavigate();
   const { login } = useApp();
+
+  useEffect(() => {
+    if (invitationToken) {
+      validateInvitation();
+    }
+  }, [invitationToken]);
+
+  const validateInvitation = async () => {
+    try {
+      const response = await invitationsApi.validate(invitationToken);
+      setInvitationInfo(response.data);
+      setEmail(response.data.email);
+    } catch (err) {
+      setError('Invalid or expired invitation');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +50,7 @@ function Register() {
     setLoading(true);
 
     try {
-      const response = await auth.register(username, email, password);
+      const response = await auth.register(username, email, password, invitationToken);
       login(response.data.user, response.data.token);
       navigate('/');
     } catch (err) {
@@ -51,10 +70,10 @@ function Register() {
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <UserPlus size={48} color="var(--primary-color)" style={{ margin: '0 auto 1rem' }} />
           <h2 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            Create Account
+            {invitationInfo ? 'Accept Invitation' : 'Create Account'}
           </h2>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Join NoodleNook today
+            {invitationInfo ? `You've been invited to join as ${invitationInfo.role}` : 'Join NoodleNook today'}
           </p>
         </div>
 
@@ -106,7 +125,7 @@ function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={loading}
+              disabled={loading || !!invitationInfo}
               placeholder="Enter your email"
             />
           </div>

@@ -1,17 +1,38 @@
 const express = require('express');
 const pool = require('../db');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
+
+// Helper function to check if request is authenticated
+const isAuthenticated = (req) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) return false;
+  
+  try {
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
+    return true;
+  } catch (err) {
+    return false;
+  }
+};
 
 // Get all pages
 router.get('/', async (req, res) => {
   try {
+    const authenticated = isAuthenticated(req);
+
+    // If authenticated, show all published pages. If not, show only public pages.
+    const whereClause = authenticated ? 'p.is_published = true' : 'p.is_published = true AND p.is_public = true';
+    
     const result = await pool.query(`
       SELECT p.*, u.username as author_name 
       FROM pages p 
       LEFT JOIN users u ON p.author_id = u.id 
-      WHERE p.is_published = true 
+      WHERE ${whereClause}
       ORDER BY p.updated_at DESC
     `);
     res.json(result.rows);
@@ -24,11 +45,16 @@ router.get('/', async (req, res) => {
 // Get single page by slug
 router.get('/:slug', async (req, res) => {
   try {
+    const authenticated = isAuthenticated(req);
+
+    // If authenticated, show all published pages. If not, show only public pages.
+    const whereClause = authenticated ? 'p.slug = $1 AND p.is_published = true' : 'p.slug = $1 AND p.is_published = true AND p.is_public = true';
+    
     const result = await pool.query(`
       SELECT p.*, u.username as author_name 
       FROM pages p 
       LEFT JOIN users u ON p.author_id = u.id 
-      WHERE p.slug = $1 AND p.is_published = true
+      WHERE ${whereClause}
     `, [req.params.slug]);
 
     if (result.rows.length === 0) {
@@ -45,7 +71,7 @@ router.get('/:slug', async (req, res) => {
 // Create page
 router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req, res) => {
   try {
-    const { title, slug, content, content_type, category } = req.body;
+    const { title, slug, content, content_type, category, is_public } = req.body;
 
     if (!title || !slug || !content) {
       return res.status(400).json({ error: 'Title, slug, and content are required' });
@@ -58,10 +84,10 @@ router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req
     }
 
     const result = await pool.query(
-      `INSERT INTO pages (title, slug, content, content_type, category, author_id) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
+      `INSERT INTO pages (title, slug, content, content_type, category, is_public, author_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
        RETURNING *`,
-      [title, slug, content, content_type || 'markdown', category || null, req.user.id]
+      [title, slug, content, content_type || 'markdown', category || null, is_public || false, req.user.id]
     );
 
     res.status(201).json(result.rows[0]);
@@ -74,7 +100,7 @@ router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req
 // Update page
 router.put('/:slug', authenticateToken, authorizeRole('editor', 'admin'), async (req, res) => {
   try {
-    const { title, content, content_type, category } = req.body;
+    const { title, content, content_type, category, is_public } = req.body;
 
     // Get current page
     const currentPage = await pool.query('SELECT * FROM pages WHERE slug = $1', [req.params.slug]);
@@ -92,10 +118,10 @@ router.put('/:slug', authenticateToken, authorizeRole('editor', 'admin'), async 
     // Update page
     const result = await pool.query(
       `UPDATE pages 
-       SET title = $1, content = $2, content_type = $3, category = $4, updated_at = CURRENT_TIMESTAMP 
-       WHERE slug = $5 
+       SET title = $1, content = $2, content_type = $3, category = $4, is_public = $5, updated_at = CURRENT_TIMESTAMP 
+       WHERE slug = $6 
        RETURNING *`,
-      [title, content, content_type, category || null, req.params.slug]
+      [title, content, content_type, category || null, is_public !== undefined ? is_public : false, req.params.slug]
     );
 
     res.json(result.rows[0]);

@@ -10,6 +10,7 @@ function PageEditor() {
   const [pageSlug, setPageSlug] = useState('');
   const [contentType, setContentType] = useState('markdown');
   const [category, setCategory] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -31,6 +32,7 @@ function PageEditor() {
       setPageSlug(page.slug);
       setContentType(page.content_type);
       setCategory(page.category || '');
+      setIsPublic(page.is_public || false);
     } catch (err) {
       setError('Failed to load page');
     }
@@ -58,9 +60,9 @@ function PageEditor() {
 
     try {
       if (isEditMode) {
-        await pages.update(slug, { title, content, content_type: contentType, category });
+        await pages.update(slug, { title, content, content_type: contentType, category, is_public: isPublic });
       } else {
-        await pages.create({ title, slug: pageSlug, content, content_type: contentType, category });
+        await pages.create({ title, slug: pageSlug, content, content_type: contentType, category, is_public: isPublic });
       }
       navigate(`/page/${pageSlug}`);
     } catch (err) {
@@ -177,6 +179,38 @@ function PageEditor() {
               disabled={loading}
               placeholder="e.g., Documentation, Guides, Tutorials"
             />
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              cursor: 'pointer',
+              fontWeight: '500',
+              color: 'var(--text-primary)'
+            }}>
+              <input
+                type="checkbox"
+                checked={isPublic}
+                onChange={(e) => setIsPublic(e.target.checked)}
+                disabled={loading}
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>Make this page public (visible to non-logged-in users)</span>
+            </label>
+            <div style={{ 
+              fontSize: '0.875rem', 
+              color: 'var(--text-secondary)',
+              marginTop: '0.25rem',
+              marginLeft: '1.75rem'
+            }}>
+              By default, pages are only visible to logged-in users
+            </div>
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>

@@ -49,7 +49,7 @@ const initDB = async () => {
       USING gin(to_tsvector('english', title || ' ' || content))
     `);
 
-    // Add category and display_order columns if they don't exist (migration)
+    // Add category, display_order, and is_public columns if they don't exist (migration)
     await client.query(`
       DO $$ 
       BEGIN
@@ -60,6 +60,10 @@ const initDB = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                       WHERE table_name='pages' AND column_name='display_order') THEN
           ALTER TABLE pages ADD COLUMN display_order INTEGER DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+                      WHERE table_name='pages' AND column_name='is_public') THEN
+          ALTER TABLE pages ADD COLUMN is_public BOOLEAN DEFAULT false;
         END IF;
       END $$;
     `);
@@ -89,6 +93,20 @@ const initDB = async () => {
         page_id INTEGER REFERENCES pages(id) ON DELETE CASCADE,
         tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
         PRIMARY KEY (page_id, tag_id)
+      )
+    `);
+
+    // Invitations table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS invitations (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        role VARCHAR(20) DEFAULT 'viewer',
+        invited_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT false
       )
     `);
 

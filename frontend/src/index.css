@@ -96,6 +96,13 @@ input, textarea, select {
 .btn-primary {
   background-color: var(--primary-color);
   color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
@@ -107,6 +114,13 @@ input, textarea, select {
 .btn-secondary {
   background-color: var(--bg-tertiary);
   color: var(--text-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
 }
 
 .btn-secondary:hover {
@@ -116,10 +130,19 @@ input, textarea, select {
 .btn-danger {
   background-color: var(--danger-color);
   color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
 }
 
 .btn-danger:hover {
   background-color: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
 }
 
 .card {

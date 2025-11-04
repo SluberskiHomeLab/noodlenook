@@ -138,12 +138,23 @@ Backend (`.env` file in `backend/` directory):
 ```env
 PORT=3001
 JWT_SECRET=your-secret-key-change-in-production
+BASE_URL=https://your-domain.com
 DB_HOST=postgres
 DB_PORT=5432
 DB_NAME=noodlenook
 DB_USER=noodlenook
 DB_PASSWORD=noodlenook123
 ```
+
+**Note:** `BASE_URL` is optional but recommended for invitation links. If not set, the application will use the request host.
+
+### Running Behind a Reverse Proxy
+
+For production deployments, it's recommended to run NoodleNook behind a reverse proxy. See [REVERSE_PROXY.md](REVERSE_PROXY.md) for detailed guides on:
+- Nginx Reverse Proxy Manager
+- Nginx Reverse Proxy
+- Traefik
+- Caddy
 
 ### Managing User Roles
 
