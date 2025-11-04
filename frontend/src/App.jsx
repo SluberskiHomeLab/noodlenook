@@ -127,6 +127,7 @@ function App() {
       <Router>
         <div className="app" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
           <Header />
+          {sidebarPosition === 'top' && showSidebar && <Sidebar />}
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
             {sidebarPosition === 'left' && showSidebar && <Sidebar />}
             <main style={{ flex: 1, overflow: 'auto', padding: '2rem' }}>
