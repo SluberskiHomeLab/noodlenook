@@ -1,18 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
-import { users as usersApi } from '../utils/api';
-import { Users, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { users as usersApi, invitations as invitationsApi } from '../utils/api';
+import { Users, Shield, AlertCircle, CheckCircle, Mail, Copy } from 'lucide-react';
 
 function AdminDashboard() {
   const { user } = useApp();
   const [users, setUsers] = useState([]);
+  const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState(null);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('viewer');
+  const [inviteMethod, setInviteMethod] = useState('link');
 
   useEffect(() => {
     loadUsers();
+    loadInvitations();
   }, []);
 
   const loadUsers = async () => {
@@ -25,6 +31,15 @@ function AdminDashboard() {
       setError(err.response?.data?.error || 'Failed to load users');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadInvitations = async () => {
+    try {
+      const response = await invitationsApi.getAll();
+      setInvitations(response.data);
+    } catch (err) {
+      console.error('Failed to load invitations:', err);
     }
   };
 
@@ -46,6 +61,55 @@ function AdminDashboard() {
     } finally {
       setUpdatingUserId(null);
     }
+  };
+
+  const handleInviteUser = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await invitationsApi.create(inviteEmail, inviteRole, inviteMethod);
+      setSuccess('Invitation created successfully');
+      
+      // Copy invitation link to clipboard if method is 'link'
+      if (inviteMethod === 'link' && response.data.invitation_link) {
+        navigator.clipboard.writeText(response.data.invitation_link);
+        setSuccess('Invitation link copied to clipboard!');
+      }
+      
+      setShowInviteForm(false);
+      setInviteEmail('');
+      setInviteRole('viewer');
+      await loadInvitations();
+      setTimeout(() => setSuccess(''), 5000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to create invitation');
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId) => {
+    if (!window.confirm('Are you sure you want to revoke this invitation?')) {
+      return;
+    }
+
+    try {
+      setError('');
+      setSuccess('');
+      await invitationsApi.delete(invitationId);
+      setSuccess('Invitation revoked successfully');
+      await loadInvitations();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to revoke invitation');
+    }
+  };
+
+  const copyInvitationLink = (token) => {
+    const link = `${window.location.origin}/register?token=${token}`;
+    navigator.clipboard.writeText(link);
+    setSuccess('Invitation link copied to clipboard!');
+    setTimeout(() => setSuccess(''), 3000);
   };
 
   const getRoleBadgeColor = (role) => {
@@ -249,6 +313,231 @@ function AdminDashboard() {
         {users.length === 0 && (
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
             No users found
+          </div>
+        )}
+      </div>
+
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Mail size={24} color="var(--primary-color)" />
+            <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+              User Invitations
+            </h2>
+          </div>
+          <button
+            onClick={() => setShowInviteForm(!showInviteForm)}
+            className="btn-primary"
+          >
+            <Mail size={18} />
+            Invite User
+          </button>
+        </div>
+
+        {showInviteForm && (
+          <form onSubmit={handleInviteUser} style={{ 
+            marginBottom: '1.5rem', 
+            padding: '1.5rem', 
+            backgroundColor: 'var(--bg-secondary)', 
+            borderRadius: '0.5rem',
+            border: '1px solid var(--border-color)'
+          }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem', color: 'var(--text-primary)' }}>
+              Create New Invitation
+            </h3>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem',
+                fontWeight: '500',
+                color: 'var(--text-primary)'
+              }}>
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
+                placeholder="user@example.com"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem',
+                fontWeight: '500',
+                color: 'var(--text-primary)'
+              }}>
+                User Role
+              </label>
+              <select
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <option value="viewer">Viewer</option>
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: '0.5rem',
+                fontWeight: '500',
+                color: 'var(--text-primary)'
+              }}>
+                Invitation Method
+              </label>
+              <select
+                value={inviteMethod}
+                onChange={(e) => setInviteMethod(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <option value="link">Copy Link (Manual)</option>
+                <option value="smtp">Send via SMTP (Not Configured)</option>
+                <option value="webhook">Send via Webhook (Not Configured)</option>
+              </select>
+              <div style={{ 
+                fontSize: '0.875rem', 
+                color: 'var(--text-secondary)',
+                marginTop: '0.5rem'
+              }}>
+                {inviteMethod === 'link' && 'The invitation link will be copied to your clipboard'}
+                {inviteMethod === 'smtp' && 'Email sending is not yet configured'}
+                {inviteMethod === 'webhook' && 'Webhook integration is not yet configured'}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button type="submit" className="btn-primary">
+                Create Invitation
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setShowInviteForm(false)}
+                className="btn-secondary"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  Email
+                </th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  Role
+                </th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  Status
+                </th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  Created
+                </th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  Expires
+                </th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {invitations.map((inv) => (
+                <tr key={inv.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <td style={{ padding: '1rem', color: 'var(--text-primary)' }}>
+                    {inv.email}
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    <span style={{
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      backgroundColor: getRoleBadgeColor(inv.role) + '20',
+                      color: getRoleBadgeColor(inv.role),
+                      border: `1px solid ${getRoleBadgeColor(inv.role)}`,
+                    }}>
+                      {inv.role}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
+                    {inv.used ? (
+                      <span style={{ color: 'var(--success-color)' }}>✓ Used</span>
+                    ) : new Date(inv.expires_at) < new Date() ? (
+                      <span style={{ color: 'var(--danger-color)' }}>Expired</span>
+                    ) : (
+                      <span style={{ color: 'var(--warning-color)' }}>Pending</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                    {new Date(inv.created_at).toLocaleDateString()}
+                  </td>
+                  <td style={{ padding: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                    {new Date(inv.expires_at).toLocaleDateString()}
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {!inv.used && new Date(inv.expires_at) > new Date() && (
+                        <button
+                          onClick={() => copyInvitationLink(inv.token)}
+                          className="btn-secondary"
+                          style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
+                          title="Copy invitation link"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleRevokeInvitation(inv.id)}
+                        className="btn-danger"
+                        style={{ padding: '0.375rem 0.75rem', fontSize: '0.875rem' }}
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {invitations.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+            No invitations found
           </div>
         )}
       </div>

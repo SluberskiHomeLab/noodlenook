@@ -96,6 +96,20 @@ const initDB = async () => {
       )
     `);
 
+    // Invitations table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS invitations (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        token VARCHAR(255) UNIQUE NOT NULL,
+        role VARCHAR(20) DEFAULT 'viewer',
+        invited_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT false
+      )
+    `);
+
     console.log('Database initialized successfully');
   } catch (err) {
     console.error('Error initializing database:', err);

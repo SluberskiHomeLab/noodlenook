@@ -15,7 +15,7 @@ api.interceptors.request.use((config) => {
 
 export const auth = {
   login: (username, password) => api.post('/auth/login', { username, password }),
-  register: (username, email, password) => api.post('/auth/register', { username, email, password }),
+  register: (username, email, password, invitation_token) => api.post('/auth/register', { username, email, password, invitation_token }),
   me: () => api.get('/auth/me'),
 };
 
@@ -35,6 +35,13 @@ export const search = {
 export const users = {
   getAll: () => api.get('/users'),
   updateRole: (id, role) => api.put(`/users/${id}/role`, { role }),
+};
+
+export const invitations = {
+  getAll: () => api.get('/invitations'),
+  create: (email, role, method) => api.post('/invitations', { email, role, method }),
+  validate: (token) => api.get(`/invitations/validate/${token}`),
+  delete: (id) => api.delete(`/invitations/${id}`),
 };
 
 export default api;

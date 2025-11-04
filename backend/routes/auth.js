@@ -8,7 +8,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, invitation_token } = req.body;
 
     // Validate input
     if (!username || !email || !password) {
@@ -25,13 +25,43 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Username or email already exists' });
     }
 
+    let userRole = 'viewer';
+
+    // Check if this is an invited registration
+    if (invitation_token) {
+      const invitation = await pool.query(
+        `SELECT * FROM invitations 
+         WHERE token = $1 AND used = false AND expires_at > NOW()`,
+        [invitation_token]
+      );
+
+      if (invitation.rows.length === 0) {
+        return res.status(400).json({ error: 'Invalid or expired invitation' });
+      }
+
+      const inv = invitation.rows[0];
+
+      // Verify email matches invitation
+      if (inv.email !== email) {
+        return res.status(400).json({ error: 'Email does not match invitation' });
+      }
+
+      userRole = inv.role;
+
+      // Mark invitation as used
+      await pool.query(
+        'UPDATE invitations SET used = true WHERE id = $1',
+        [inv.id]
+      );
+    } else {
+      // Check if this is the first user
+      const userCount = await pool.query('SELECT COUNT(*) FROM users');
+      const isFirstUser = parseInt(userCount.rows[0].count) === 0;
+      userRole = isFirstUser ? 'admin' : 'viewer';
+    }
+
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
-
-    // Check if this is the first user
-    const userCount = await pool.query('SELECT COUNT(*) FROM users');
-    const isFirstUser = parseInt(userCount.rows[0].count) === 0;
-    const userRole = isFirstUser ? 'admin' : 'viewer';
 
     // Create user
     const result = await pool.query(
