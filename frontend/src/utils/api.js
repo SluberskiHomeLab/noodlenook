@@ -25,6 +25,7 @@ export const pages = {
   create: (data) => api.post('/pages', data),
   update: (slug, data) => api.put(`/pages/${slug}`, data),
   delete: (slug) => api.delete(`/pages/${slug}`),
+  updateOrder: (slug, display_order) => api.put(`/pages/order/${slug}`, { display_order }),
 };
 
 export const search = {

@@ -45,7 +45,7 @@ router.get('/:slug', async (req, res) => {
 // Create page
 router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req, res) => {
   try {
-    const { title, slug, content, content_type } = req.body;
+    const { title, slug, content, content_type, category } = req.body;
 
     if (!title || !slug || !content) {
       return res.status(400).json({ error: 'Title, slug, and content are required' });
@@ -58,10 +58,10 @@ router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req
     }
 
     const result = await pool.query(
-      `INSERT INTO pages (title, slug, content, content_type, author_id) 
-       VALUES ($1, $2, $3, $4, $5) 
+      `INSERT INTO pages (title, slug, content, content_type, category, author_id) 
+       VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
-      [title, slug, content, content_type || 'markdown', req.user.id]
+      [title, slug, content, content_type || 'markdown', category || null, req.user.id]
     );
 
     res.status(201).json(result.rows[0]);
@@ -74,7 +74,7 @@ router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req
 // Update page
 router.put('/:slug', authenticateToken, authorizeRole('editor', 'admin'), async (req, res) => {
   try {
-    const { title, content, content_type } = req.body;
+    const { title, content, content_type, category } = req.body;
 
     // Get current page
     const currentPage = await pool.query('SELECT * FROM pages WHERE slug = $1', [req.params.slug]);
@@ -92,10 +92,10 @@ router.put('/:slug', authenticateToken, authorizeRole('editor', 'admin'), async 
     // Update page
     const result = await pool.query(
       `UPDATE pages 
-       SET title = $1, content = $2, content_type = $3, updated_at = CURRENT_TIMESTAMP 
-       WHERE slug = $4 
+       SET title = $1, content = $2, content_type = $3, category = $4, updated_at = CURRENT_TIMESTAMP 
+       WHERE slug = $5 
        RETURNING *`,
-      [title, content, content_type, req.params.slug]
+      [title, content, content_type, category || null, req.params.slug]
     );
 
     res.json(result.rows[0]);
@@ -117,6 +117,31 @@ router.delete('/:slug', authenticateToken, authorizeRole('admin'), async (req, r
     res.json({ message: 'Page deleted successfully' });
   } catch (error) {
     console.error('Error deleting page:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update page order (admin only)
+router.put('/order/:slug', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { display_order } = req.body;
+    
+    if (display_order === undefined) {
+      return res.status(400).json({ error: 'display_order is required' });
+    }
+
+    const result = await pool.query(
+      'UPDATE pages SET display_order = $1 WHERE slug = $2 RETURNING *',
+      [display_order, req.params.slug]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating page order:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
