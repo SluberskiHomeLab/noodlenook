@@ -184,7 +184,7 @@ function Dashboard() {
                     WebkitLineClamp: 3,
                     WebkitBoxOrient: 'vertical',
                   }}>
-                    {page.content.substring(0, 150)}...
+                    {page.content?.substring(0, 150) || 'No content'}...
                   </p>
                   <div style={{ 
                     display: 'flex', 

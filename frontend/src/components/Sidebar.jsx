@@ -27,6 +27,7 @@ function Sidebar() {
   const groupPagesByFirstLetter = () => {
     const grouped = {};
     allPages.forEach(page => {
+      if (!page.title || page.title.length === 0) return;
       const firstLetter = page.title[0].toUpperCase();
       if (!grouped[firstLetter]) {
         grouped[firstLetter] = [];

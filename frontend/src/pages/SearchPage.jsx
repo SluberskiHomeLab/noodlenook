@@ -136,7 +136,7 @@ function SearchPage() {
                             WebkitLineClamp: 2,
                             WebkitBoxOrient: 'vertical',
                           }}>
-                            {page.content.substring(0, 200)}...
+                            {page.content?.substring(0, 200) || 'No content'}...
                           </p>
                           <div style={{ 
                             fontSize: '0.875rem',
