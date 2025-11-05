@@ -1,26 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FileText, Plus, Home, List, FolderOpen, Clock, User, GripVertical } from 'lucide-react';
-import { pages } from '../utils/api';
+import { pages, settings } from '../utils/api';
 import { useApp } from '../App';
 
 function Sidebar() {
   const [allPages, setAllPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user, sidebarPosition, tocStyle, changeTocStyle } = useApp();
+  const [defaultSortOrder, setDefaultSortOrder] = useState('alphabetical');
   const [sortBy, setSortBy] = useState(() => {
     const saved = localStorage.getItem('sortBy');
-    return saved || 'alphabetical';
+    return saved || defaultSortOrder;
   });
   const [draggedPage, setDraggedPage] = useState(null);
 
   useEffect(() => {
+    loadDefaultSortOrder();
     loadPages();
   }, []);
 
   useEffect(() => {
     localStorage.setItem('sortBy', sortBy);
   }, [sortBy]);
+
+  const loadDefaultSortOrder = async () => {
+    try {
+      const response = await settings.getPublic('default_sort_order');
+      const order = response.data.value || 'alphabetical';
+      setDefaultSortOrder(order);
+      // Only set sortBy if user hasn't manually changed it (no localStorage value)
+      if (!localStorage.getItem('sortBy')) {
+        setSortBy(order);
+      }
+    } catch (error) {
+      // If setting doesn't exist or user is not authorized, use default
+      console.log('Using default sort order');
+    }
+  };
 
   const loadPages = async () => {
     try {

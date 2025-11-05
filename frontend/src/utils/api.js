@@ -47,6 +47,7 @@ export const invitations = {
 export const settings = {
   getAll: () => api.get('/settings'),
   get: (key) => api.get(`/settings/${key}`),
+  getPublic: (key) => api.get(`/settings/public/${key}`),
   update: (key, value, encrypted) => api.put(`/settings/${key}`, { value, encrypted }),
   delete: (key) => api.delete(`/settings/${key}`),
   testSmtp: (config) => api.post('/settings/test-smtp', config),

@@ -52,6 +52,35 @@ router.get('/:key', authenticateToken, authorizeRole('admin'), async (req, res) 
   }
 });
 
+// Get public settings (accessible to all authenticated users)
+router.get('/public/:key', authenticateToken, async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    // List of settings that are public (non-sensitive)
+    const publicSettings = ['default_sort_order'];
+    
+    if (!publicSettings.includes(key)) {
+      return res.status(403).json({ error: 'This setting is not publicly accessible' });
+    }
+    
+    const result = await pool.query(
+      'SELECT key, value FROM system_settings WHERE key = $1',
+      [key]
+    );
+
+    if (result.rows.length === 0) {
+      // Return default value if setting doesn't exist
+      return res.json({ key, value: 'alphabetical' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching public setting:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Update or create a setting (admin only)
 router.put('/:key', authenticateToken, authorizeRole('admin'), async (req, res) => {
   try {
