@@ -21,10 +21,7 @@ docker exec -it noodlenook-db psql -U noodlenook -d noodlenook
 
 ## 📊 Default Credentials
 
-First user must register via the UI. To promote to admin:
-```sql
-UPDATE users SET role = 'admin' WHERE username = 'your-username';
-```
+First user to register via the UI is an Admin.  Afterwards, you can invite users through the Admin settings
 
 ## 🔑 User Roles
 
