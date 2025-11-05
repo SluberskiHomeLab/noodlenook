@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { settings as settingsApi } from '../utils/api';
-import { Settings as SettingsIcon, Mail, Webhook, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, Webhook, CheckCircle, AlertCircle, Eye, EyeOff, Layout } from 'lucide-react';
 
 function SettingsPage() {
   const { user } = useApp();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [activeTab, setActiveTab] = useState('smtp');
+  const [activeTab, setActiveTab] = useState('display');
+
+  // Display Settings
+  const [defaultSortOrder, setDefaultSortOrder] = useState('alphabetical');
 
   // SMTP Settings
   const [smtpHost, setSmtpHost] = useState('');
@@ -39,6 +42,9 @@ function SettingsPage() {
         settingsMap[setting.key] = setting.value;
       });
 
+      // Load Display settings
+      setDefaultSortOrder(settingsMap['default_sort_order'] || 'alphabetical');
+
       // Load SMTP settings
       setSmtpHost(settingsMap['smtp_host'] || '');
       setSmtpPort(settingsMap['smtp_port'] || '587');
@@ -54,6 +60,21 @@ function SettingsPage() {
       setError(err.response?.data?.error || 'Failed to load settings');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const saveDisplaySettings = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    try {
+      await settingsApi.update('default_sort_order', defaultSortOrder, false);
+
+      setSuccess('Display settings saved successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save display settings');
     }
   };
 
@@ -225,6 +246,25 @@ function SettingsPage() {
       <div style={{ marginBottom: '2rem' }}>
         <div style={{ display: 'flex', gap: '1rem', borderBottom: '2px solid var(--border-color)' }}>
           <button
+            onClick={() => setActiveTab('display')}
+            style={{
+              padding: '1rem 2rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'display' ? '3px solid var(--primary-color)' : '3px solid transparent',
+              color: activeTab === 'display' ? 'var(--primary-color)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'display' ? 'bold' : 'normal',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Layout size={20} />
+            Display
+          </button>
+          <button
             onClick={() => setActiveTab('smtp')}
             style={{
               padding: '1rem 2rem',
@@ -264,6 +304,59 @@ function SettingsPage() {
           </button>
         </div>
       </div>
+
+      {activeTab === 'display' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+            Display Settings
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+            Configure default display settings for all users. These settings will apply to all users across the system.
+          </p>
+
+          <form onSubmit={saveDisplaySettings}>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-primary)' }}>
+                  Default Page Sort Order
+                </label>
+                <select
+                  value={defaultSortOrder}
+                  onChange={(e) => setDefaultSortOrder(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <option value="alphabetical">Alphabetical</option>
+                  <option value="category">Category</option>
+                  <option value="recent">Recently Created</option>
+                  <option value="creator">Creator</option>
+                  <option value="custom">Custom Order (Admin Drag & Drop)</option>
+                </select>
+                <div style={{ 
+                  fontSize: '0.875rem', 
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.5rem'
+                }}>
+                  This setting determines how pages are organized in the sidebar for all users. 
+                  Users can still temporarily change the sort order for their session, but this will be the default.
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="submit" className="btn-primary">
+                  Save Display Settings
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
 
       {activeTab === 'smtp' && (
         <div className="card">

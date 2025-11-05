@@ -5,6 +5,11 @@ const { encrypt, decrypt } = require('../utils/encryption');
 
 const router = express.Router();
 
+// Default values for settings
+const DEFAULT_VALUES = {
+  default_sort_order: 'alphabetical'
+};
+
 // Get all settings (admin only)
 router.get('/', authenticateToken, authorizeRole('admin'), async (req, res) => {
   try {
@@ -48,6 +53,36 @@ router.get('/:key', authenticateToken, authorizeRole('admin'), async (req, res) 
     res.json(setting);
   } catch (error) {
     console.error('Error fetching setting:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get public settings (accessible to all authenticated users)
+router.get('/public/:key', authenticateToken, async (req, res) => {
+  try {
+    const { key } = req.params;
+    
+    // List of settings that are public (non-sensitive)
+    const publicSettings = ['default_sort_order'];
+    
+    if (!publicSettings.includes(key)) {
+      return res.status(403).json({ error: 'This setting is not publicly accessible' });
+    }
+    
+    const result = await pool.query(
+      'SELECT key, value FROM system_settings WHERE key = $1',
+      [key]
+    );
+
+    if (result.rows.length === 0) {
+      // Return default value if setting doesn't exist
+      const defaultValue = DEFAULT_VALUES[key] || null;
+      return res.json({ key, value: defaultValue });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error fetching public setting:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
