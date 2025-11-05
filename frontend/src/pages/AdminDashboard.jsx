@@ -71,19 +71,35 @@ function AdminDashboard() {
 
     try {
       const response = await invitationsApi.create(inviteEmail, inviteRole, inviteMethod);
-      setSuccess('Invitation created successfully');
       
-      // Copy invitation link to clipboard if method is 'link'
-      if (inviteMethod === 'link' && response.data.invitation_link) {
-        navigator.clipboard.writeText(response.data.invitation_link);
-        setSuccess('Invitation link copied to clipboard!');
+      // Check if notification was sent (for SMTP and webhook methods)
+      if (inviteMethod === 'smtp' || inviteMethod === 'webhook') {
+        const methodName = inviteMethod === 'smtp' ? 'email' : 'webhook notification';
+        if (response.data.notification_sent) {
+          setSuccess(`Invitation created and ${methodName} sent successfully!`);
+          setTimeout(() => setSuccess(''), 5000);
+        } else {
+          // Invitation was created but notification failed
+          const errorMsg = response.data.notification_error || 'Unknown error';
+          setError(`Invitation created, but ${methodName} failed to send: ${errorMsg}`);
+          // Keep error message visible longer for users to read
+          setTimeout(() => setError(''), 8000);
+        }
+      } else if (inviteMethod === 'link') {
+        // Copy invitation link to clipboard if method is 'link'
+        if (response.data.invitation_link) {
+          navigator.clipboard.writeText(response.data.invitation_link);
+          setSuccess('Invitation link copied to clipboard!');
+        } else {
+          setSuccess('Invitation created successfully');
+        }
+        setTimeout(() => setSuccess(''), 5000);
       }
       
       setShowInviteForm(false);
       setInviteEmail('');
       setInviteRole('viewer');
       await loadInvitations();
-      setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create invitation');
     }
