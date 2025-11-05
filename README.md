@@ -2,7 +2,7 @@
 
 A modern, feature-rich Wiki and Knowledge Base application built with React, Node.js, Express, and PostgreSQL. Designed to run seamlessly in Docker with a clean, intuitive interface and powerful features.
 
-Check out the Demo Documentation Site: [](https://kb.sluberskihomelab.com/)
+Check out the Demo Documentation Site: [https://kb.sluberskihomelab.com/](https://kb.sluberskihomelab.com/)
 
 ## ✨ Features
 
