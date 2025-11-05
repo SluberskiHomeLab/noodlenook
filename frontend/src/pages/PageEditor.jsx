@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Save, X, FileText, Type } from 'lucide-react';
 import { pages } from '../utils/api';
+import MarkdownToolbar from '../components/MarkdownToolbar';
+import RichTextToolbar from '../components/RichTextToolbar';
 
 function PageEditor() {
   const { slug } = useParams();
@@ -15,6 +17,7 @@ function PageEditor() {
   const [error, setError] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const navigate = useNavigate();
+  const textareaRef = useRef(null);
 
   useEffect(() => {
     if (slug) {
@@ -51,6 +54,28 @@ function PageEditor() {
     if (!isEditMode) {
       setPageSlug(generateSlug(newTitle));
     }
+  };
+
+  const handleInsert = (prefix, suffix = '') => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.substring(start, end);
+    const beforeText = content.substring(0, start);
+    const afterText = content.substring(end);
+
+    // Insert the syntax with the selected text or placeholder
+    const newText = beforeText + prefix + (selectedText || '') + suffix + afterText;
+    setContent(newText);
+
+    // Set cursor position after insertion
+    setTimeout(() => {
+      const newCursorPos = start + prefix.length + (selectedText ? selectedText.length : 0);
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
   const handleSubmit = async (e) => {
@@ -222,7 +247,10 @@ function PageEditor() {
             }}>
               Content
             </label>
+            {contentType === 'markdown' && <MarkdownToolbar onInsert={handleInsert} />}
+            {contentType === 'html' && <RichTextToolbar onInsert={handleInsert} />}
             <textarea
+              ref={textareaRef}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               required
