@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../App';
 import { users as usersApi, invitations as invitationsApi } from '../utils/api';
-import { Users, Shield, AlertCircle, CheckCircle, Mail, Copy } from 'lucide-react';
+import { Users, Shield, AlertCircle, CheckCircle, Mail, Copy, Settings } from 'lucide-react';
 
 function AdminDashboard() {
   const { user } = useApp();
@@ -138,11 +139,19 @@ function AdminDashboard() {
   return (
     <div className="container" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-          <Shield size={32} color="var(--danger-color)" />
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
-            Admin Dashboard
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Shield size={32} color="var(--danger-color)" />
+            <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+              Admin Dashboard
+            </h1>
+          </div>
+          <Link to="/settings">
+            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Settings size={18} />
+              System Settings
+            </button>
+          </Link>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
           Manage users and system configuration
@@ -421,8 +430,8 @@ function AdminDashboard() {
                 }}
               >
                 <option value="link">Copy Link (Manual)</option>
-                <option value="smtp">Send via SMTP (Not Configured)</option>
-                <option value="webhook">Send via Webhook (Not Configured)</option>
+                <option value="smtp">Send via SMTP Email</option>
+                <option value="webhook">Send via Webhook</option>
               </select>
               <div style={{ 
                 fontSize: '0.875rem', 
@@ -430,8 +439,8 @@ function AdminDashboard() {
                 marginTop: '0.5rem'
               }}>
                 {inviteMethod === 'link' && 'The invitation link will be copied to your clipboard'}
-                {inviteMethod === 'smtp' && 'Email sending is not yet configured'}
-                {inviteMethod === 'webhook' && 'Webhook integration is not yet configured'}
+                {inviteMethod === 'smtp' && 'Email will be sent using configured SMTP settings'}
+                {inviteMethod === 'webhook' && 'Notification will be sent to configured webhook endpoint'}
               </div>
             </div>
 

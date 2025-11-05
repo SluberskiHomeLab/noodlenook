@@ -2,8 +2,141 @@ const express = require('express');
 const crypto = require('crypto');
 const pool = require('../db');
 const { authenticateToken, authorizeRole } = require('../middleware/auth');
+const { decrypt } = require('../utils/encryption');
 
 const router = express.Router();
+
+// Helper function to get setting value
+async function getSetting(key) {
+  const result = await pool.query(
+    'SELECT value, encrypted FROM system_settings WHERE key = $1',
+    [key]
+  );
+  
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  const setting = result.rows[0];
+  
+  // Decrypt if encrypted
+  if (setting.encrypted && setting.value) {
+    return decrypt(setting.value);
+  }
+  
+  return setting.value;
+}
+
+// Helper function to escape HTML to prevent XSS
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, (m) => map[m]);
+}
+
+// Helper function to send email via SMTP
+async function sendInvitationEmail(email, invitationLink, role) {
+  try {
+    const smtpHost = await getSetting('smtp_host');
+    const smtpPort = await getSetting('smtp_port');
+    const smtpSecure = await getSetting('smtp_secure');
+    const smtpUser = await getSetting('smtp_user');
+    const smtpPass = await getSetting('smtp_pass');
+    const smtpFrom = await getSetting('smtp_from');
+
+    if (!smtpHost || !smtpPort) {
+      console.log('SMTP not configured');
+      return { success: false, error: 'SMTP not configured' };
+    }
+
+    const nodemailer = require('nodemailer');
+
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: parseInt(smtpPort),
+      secure: smtpSecure === 'true',
+      auth: smtpUser && smtpPass ? {
+        user: smtpUser,
+        pass: smtpPass
+      } : undefined
+    });
+
+    // Escape values to prevent XSS
+    const safeRole = escapeHtml(role);
+    const safeLink = escapeHtml(invitationLink);
+
+    const mailOptions = {
+      from: smtpFrom || smtpUser,
+      to: email,
+      subject: 'You\'re invited to join NoodleNook',
+      text: `You've been invited to join NoodleNook as a ${role}.\n\nClick the link below to accept your invitation:\n${invitationLink}\n\nThis invitation will expire in 7 days.`,
+      html: `
+        <h2>You're invited to join NoodleNook</h2>
+        <p>You've been invited to join NoodleNook as a <strong>${safeRole}</strong>.</p>
+        <p>Click the link below to accept your invitation:</p>
+        <p><a href="${safeLink}" style="padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">Accept Invitation</a></p>
+        <p>Or copy and paste this URL into your browser:</p>
+        <p>${safeLink}</p>
+        <p><em>This invitation will expire in 7 days.</em></p>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending email:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Helper function to send webhook notification
+async function sendWebhookNotification(email, invitationLink, role) {
+  try {
+    const webhookUrl = await getSetting('webhook_url');
+    const webhookHeaders = await getSetting('webhook_headers');
+
+    if (!webhookUrl) {
+      console.log('Webhook not configured');
+      return { success: false, error: 'Webhook not configured' };
+    }
+
+    const axios = require('axios');
+
+    const payload = {
+      type: 'invitation',
+      email: email,
+      role: role,
+      invitation_link: invitationLink,
+      timestamp: new Date().toISOString()
+    };
+
+    const headers = {};
+    if (webhookHeaders) {
+      try {
+        Object.assign(headers, JSON.parse(webhookHeaders));
+      } catch (err) {
+        console.error('Error parsing webhook headers:', err);
+      }
+    }
+
+    const config = {
+      headers,
+      timeout: 10000, // 10 second timeout
+      maxRedirects: 0 // Don't follow redirects
+    };
+
+    await axios.post(webhookUrl, payload, config);
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending webhook:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 // Get all invitations (admin only)
 router.get('/', authenticateToken, authorizeRole('admin'), async (req, res) => {
@@ -72,27 +205,34 @@ router.post('/', authenticateToken, authorizeRole('admin'), async (req, res) => 
 
     const invitation = result.rows[0];
 
-    // Generate invitation link using BASE_URL from env or fallback to request host
+    // Generate invitation link - BASE_URL should be set in production
+    if (!process.env.BASE_URL) {
+      console.warn('WARNING: BASE_URL not set in environment. Using request host which may be vulnerable to host header injection.');
+    }
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
     const invitationLink = `${baseUrl}/register?token=${token}`;
 
     // Send notification based on method
+    let notificationResult = { success: true };
+    
     if (method === 'smtp') {
-      // TODO: Implement SMTP email sending
-      // For now, we'll just return the link
-      console.log('SMTP invitation would be sent to:', email);
-      console.log('Invitation link:', invitationLink);
+      notificationResult = await sendInvitationEmail(email, invitationLink, role);
+      if (!notificationResult.success) {
+        console.error('Failed to send SMTP invitation:', notificationResult.error);
+      }
     } else if (method === 'webhook') {
-      // TODO: Implement webhook notification
-      // For now, we'll just log it
-      console.log('Webhook invitation would be sent to:', email);
-      console.log('Invitation link:', invitationLink);
+      notificationResult = await sendWebhookNotification(email, invitationLink, role);
+      if (!notificationResult.success) {
+        console.error('Failed to send webhook notification:', notificationResult.error);
+      }
     }
 
     res.status(201).json({
       ...invitation,
       invitation_link: invitationLink,
-      message: 'Invitation created successfully'
+      message: 'Invitation created successfully',
+      notification_sent: notificationResult.success,
+      notification_error: notificationResult.error
     });
   } catch (error) {
     console.error('Error creating invitation:', error);
