@@ -8,12 +8,10 @@ function Sidebar() {
   const [allPages, setAllPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user, sidebarPosition, tocStyle, changeTocStyle } = useApp();
-  const [defaultSortOrder, setDefaultSortOrder] = useState('alphabetical');
-  const [sortBy, setSortBy] = useState(() => {
-    const saved = localStorage.getItem('sortBy');
-    return saved || defaultSortOrder;
-  });
+  const DEFAULT_SORT = 'alphabetical';
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [draggedPage, setDraggedPage] = useState(null);
+  const [sortInitialized, setSortInitialized] = useState(false);
 
   useEffect(() => {
     loadDefaultSortOrder();
@@ -21,20 +19,26 @@ function Sidebar() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('sortBy', sortBy);
-  }, [sortBy]);
+    // Only save to localStorage after initial load is complete
+    if (sortInitialized) {
+      localStorage.setItem('sortBy', sortBy);
+    }
+  }, [sortBy, sortInitialized]);
 
   const loadDefaultSortOrder = async () => {
     try {
       const response = await settings.getPublic('default_sort_order');
-      const order = response.data.value || 'alphabetical';
-      setDefaultSortOrder(order);
-      // Only set sortBy if user hasn't manually changed it (no localStorage value)
-      if (!localStorage.getItem('sortBy')) {
-        setSortBy(order);
-      }
+      const serverDefault = response.data.value || DEFAULT_SORT;
+      const saved = localStorage.getItem('sortBy');
+      
+      // Use saved preference if exists, otherwise use server default
+      setSortBy(saved || serverDefault);
+      setSortInitialized(true);
     } catch (error) {
-      // If setting doesn't exist or user is not authorized, use default
+      // If setting doesn't exist or error occurs, use localStorage or default
+      const saved = localStorage.getItem('sortBy');
+      setSortBy(saved || DEFAULT_SORT);
+      setSortInitialized(true);
       console.log('Using default sort order');
     }
   };

@@ -5,6 +5,11 @@ const { encrypt, decrypt } = require('../utils/encryption');
 
 const router = express.Router();
 
+// Default values for settings
+const DEFAULT_VALUES = {
+  default_sort_order: 'alphabetical'
+};
+
 // Get all settings (admin only)
 router.get('/', authenticateToken, authorizeRole('admin'), async (req, res) => {
   try {
@@ -71,7 +76,8 @@ router.get('/public/:key', authenticateToken, async (req, res) => {
 
     if (result.rows.length === 0) {
       // Return default value if setting doesn't exist
-      return res.json({ key, value: 'alphabetical' });
+      const defaultValue = DEFAULT_VALUES[key] || null;
+      return res.json({ key, value: defaultValue });
     }
 
     res.json(result.rows[0]);
