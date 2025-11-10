@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../App';
 import { settings as settingsApi } from '../utils/api';
-import { Settings as SettingsIcon, Mail, Webhook, CheckCircle, AlertCircle, Eye, EyeOff, Layout } from 'lucide-react';
+import { Settings as SettingsIcon, Mail, Webhook, CheckCircle, AlertCircle, Eye, EyeOff, Layout, GitBranch } from 'lucide-react';
 
 function SettingsPage() {
   const { user } = useApp();
@@ -12,6 +12,9 @@ function SettingsPage() {
 
   // Display Settings
   const [defaultSortOrder, setDefaultSortOrder] = useState('alphabetical');
+
+  // Workflow Settings
+  const [approvalWorkflowEnabled, setApprovalWorkflowEnabled] = useState(false);
 
   // SMTP Settings
   const [smtpHost, setSmtpHost] = useState('');
@@ -45,6 +48,9 @@ function SettingsPage() {
       // Load Display settings
       setDefaultSortOrder(settingsMap['default_sort_order'] || 'alphabetical');
 
+      // Load Workflow settings
+      setApprovalWorkflowEnabled(settingsMap['approval_workflow_enabled'] === 'true');
+
       // Load SMTP settings
       setSmtpHost(settingsMap['smtp_host'] || '');
       setSmtpPort(settingsMap['smtp_port'] || '587');
@@ -75,6 +81,21 @@ function SettingsPage() {
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save display settings');
+    }
+  };
+
+  const saveWorkflowSettings = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    try {
+      await settingsApi.update('approval_workflow_enabled', approvalWorkflowEnabled.toString(), false);
+
+      setSuccess('Workflow settings saved successfully');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to save workflow settings');
     }
   };
 
@@ -301,6 +322,25 @@ function SettingsPage() {
           >
             <Webhook size={20} />
             Webhooks
+          </button>
+          <button
+            onClick={() => setActiveTab('workflow')}
+            style={{
+              padding: '1rem 2rem',
+              background: 'none',
+              border: 'none',
+              borderBottom: activeTab === 'workflow' ? '3px solid var(--primary-color)' : '3px solid transparent',
+              color: activeTab === 'workflow' ? 'var(--primary-color)' : 'var(--text-secondary)',
+              fontWeight: activeTab === 'workflow' ? 'bold' : 'normal',
+              cursor: 'pointer',
+              fontSize: '1.1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <GitBranch size={20} />
+            Workflow
           </button>
         </div>
       </div>
@@ -634,6 +674,83 @@ function SettingsPage() {
                   className="btn-secondary"
                 >
                   {testingWebhook ? 'Testing...' : 'Test Webhook'}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {activeTab === 'workflow' && (
+        <div className="card">
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--text-primary)', marginBottom: '1rem' }}>
+            Approval Workflow Settings
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+            Configure approval workflow for page edits. When enabled, edits made by Editors will require Admin approval before being published.
+          </p>
+
+          <form onSubmit={saveWorkflowSettings}>
+            <div style={{ display: 'grid', gap: '1.5rem' }}>
+              <div>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  color: 'var(--text-primary)'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={approvalWorkflowEnabled}
+                    onChange={(e) => setApprovalWorkflowEnabled(e.target.checked)}
+                    style={{
+                      width: '1.25rem',
+                      height: '1.25rem',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  Enable Approval Workflow for Editor Changes
+                </label>
+                <p style={{ 
+                  fontSize: '0.875rem', 
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.5rem',
+                  marginLeft: '2rem'
+                }}>
+                  When enabled, page edits made by Editors will be saved as pending and require Admin approval. 
+                  Admins can always edit pages directly without approval.
+                </p>
+              </div>
+
+              <div style={{
+                padding: '1rem',
+                backgroundColor: 'var(--bg-secondary)',
+                borderRadius: '0.5rem',
+                border: '1px solid var(--border-color)'
+              }}>
+                <h3 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>
+                  How It Works
+                </h3>
+                <ul style={{
+                  fontSize: '0.875rem',
+                  color: 'var(--text-secondary)',
+                  marginLeft: '1.25rem',
+                  marginBottom: 0
+                }}>
+                  <li>When enabled, Editors submit edits for review instead of publishing directly</li>
+                  <li>Admins receive notifications of pending edits (view in Admin Dashboard)</li>
+                  <li>Admins can approve or reject edits with optional feedback</li>
+                  <li>Approved edits are immediately published to the page</li>
+                  <li>Rejected edits notify the Editor with the rejection reason</li>
+                  <li>Admins always bypass the workflow and can edit directly</li>
+                </ul>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button type="submit" className="btn-primary">
+                  Save Workflow Settings
                 </button>
               </div>
             </div>

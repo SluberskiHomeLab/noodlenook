@@ -122,6 +122,25 @@ const initDB = async () => {
       )
     `);
 
+    // Pending page edits table for approval workflow
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pending_page_edits (
+        id SERIAL PRIMARY KEY,
+        page_id INTEGER REFERENCES pages(id) ON DELETE CASCADE,
+        title VARCHAR(255) NOT NULL,
+        content TEXT NOT NULL,
+        content_type VARCHAR(20) DEFAULT 'markdown',
+        category VARCHAR(100),
+        is_public BOOLEAN DEFAULT false,
+        editor_id INTEGER REFERENCES users(id),
+        status VARCHAR(20) DEFAULT 'pending',
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMP,
+        rejection_reason TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('Database initialized successfully');
   } catch (err) {
     console.error('Error initializing database:', err);

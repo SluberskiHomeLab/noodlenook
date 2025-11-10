@@ -13,6 +13,8 @@ import Register from './pages/Register';
 import SearchPage from './pages/SearchPage';
 import AdminDashboard from './pages/AdminDashboard';
 import SettingsPage from './pages/SettingsPage';
+import PendingEdits from './pages/PendingEdits';
+import PendingEditDetail from './pages/PendingEditDetail';
 
 import { auth } from './utils/api';
 
@@ -167,6 +169,22 @@ function App() {
                   element={
                     user && user.role === 'admin' 
                       ? <SettingsPage /> 
+                      : <Navigate to="/" />
+                  } 
+                />
+                <Route 
+                  path="/pending-edits" 
+                  element={
+                    user && (user.role === 'editor' || user.role === 'admin')
+                      ? <PendingEdits /> 
+                      : <Navigate to="/" />
+                  } 
+                />
+                <Route 
+                  path="/pending-edits/:id" 
+                  element={
+                    user && (user.role === 'editor' || user.role === 'admin')
+                      ? <PendingEditDetail /> 
                       : <Navigate to="/" />
                   } 
                 />

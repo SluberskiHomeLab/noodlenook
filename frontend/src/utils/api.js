@@ -34,6 +34,7 @@ export const search = {
 
 export const users = {
   getAll: () => api.get('/users'),
+  create: (username, email, password, role) => api.post('/users', { username, email, password, role }),
   updateRole: (id, role) => api.put(`/users/${id}/role`, { role }),
 };
 
@@ -52,6 +53,14 @@ export const settings = {
   delete: (key) => api.delete(`/settings/${key}`),
   testSmtp: (config) => api.post('/settings/test-smtp', config),
   testWebhook: (config) => api.post('/settings/test-webhook', config),
+};
+
+export const pendingEdits = {
+  getAll: () => api.get('/pending-edits'),
+  getById: (id) => api.get(`/pending-edits/${id}`),
+  approve: (id) => api.post(`/pending-edits/${id}/approve`),
+  reject: (id, reason) => api.post(`/pending-edits/${id}/reject`, { reason }),
+  delete: (id) => api.delete(`/pending-edits/${id}`),
 };
 
 export default api;
