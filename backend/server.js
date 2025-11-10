@@ -10,6 +10,7 @@ const searchRoutes = require('./routes/search');
 const usersRoutes = require('./routes/users');
 const invitationsRoutes = require('./routes/invitations');
 const settingsRoutes = require('./routes/settings');
+const pendingEditsRoutes = require('./routes/pending-edits');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +34,7 @@ app.use('/api/search', searchRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/invitations', invitationsRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/pending-edits', pendingEditsRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

@@ -85,11 +85,19 @@ function PageEditor() {
 
     try {
       if (isEditMode) {
-        await pages.update(slug, { title, content, content_type: contentType, category, is_public: isPublic });
+        const response = await pages.update(slug, { title, content, content_type: contentType, category, is_public: isPublic });
+        
+        // Check if edit requires approval
+        if (response.data.requires_approval) {
+          alert('Your edit has been submitted for approval. An admin will review it shortly.');
+          navigate('/pending-edits');
+        } else {
+          navigate(`/page/${pageSlug}`);
+        }
       } else {
         await pages.create({ title, slug: pageSlug, content, content_type: contentType, category, is_public: isPublic });
+        navigate(`/page/${pageSlug}`);
       }
-      navigate(`/page/${pageSlug}`);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save page');
     } finally {

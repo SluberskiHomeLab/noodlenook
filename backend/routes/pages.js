@@ -109,6 +109,53 @@ router.put('/:slug', authenticateToken, authorizeRole('editor', 'admin'), async 
       return res.status(404).json({ error: 'Page not found' });
     }
 
+    // Check if approval workflow is enabled
+    const approvalSetting = await pool.query(
+      'SELECT value FROM system_settings WHERE key = $1',
+      ['approval_workflow_enabled']
+    );
+
+    const approvalEnabled = approvalSetting.rows.length > 0 && approvalSetting.rows[0].value === 'true';
+
+    // If user is editor and approval workflow is enabled, create pending edit
+    if (req.user.role === 'editor' && approvalEnabled) {
+      // Check if there's already a pending edit for this page by this editor
+      const existingPending = await pool.query(
+        'SELECT id FROM pending_page_edits WHERE page_id = $1 AND editor_id = $2 AND status = $3',
+        [currentPage.rows[0].id, req.user.id, 'pending']
+      );
+
+      if (existingPending.rows.length > 0) {
+        // Update existing pending edit
+        const result = await pool.query(
+          `UPDATE pending_page_edits 
+           SET title = $1, content = $2, content_type = $3, category = $4, is_public = $5, created_at = CURRENT_TIMESTAMP
+           WHERE id = $6
+           RETURNING *`,
+          [title, content, content_type, category || null, is_public !== undefined ? is_public : false, existingPending.rows[0].id]
+        );
+        return res.json({ 
+          message: 'Edit submitted for approval (updated existing pending edit)',
+          pending_edit: result.rows[0],
+          requires_approval: true
+        });
+      } else {
+        // Create new pending edit
+        const result = await pool.query(
+          `INSERT INTO pending_page_edits (page_id, title, content, content_type, category, is_public, editor_id, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           RETURNING *`,
+          [currentPage.rows[0].id, title, content, content_type, category || null, is_public !== undefined ? is_public : false, req.user.id, 'pending']
+        );
+        return res.json({ 
+          message: 'Edit submitted for approval',
+          pending_edit: result.rows[0],
+          requires_approval: true
+        });
+      }
+    }
+
+    // Admin users or when approval workflow is disabled - update directly
     // Save revision
     await pool.query(
       'INSERT INTO page_revisions (page_id, content, author_id) VALUES ($1, $2, $3)',
