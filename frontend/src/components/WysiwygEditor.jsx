@@ -10,7 +10,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
   const quillRef = useRef(null);
 
   // Custom image handler for the toolbar button
-  const imageHandler = () => {
+  const imageHandler = React.useCallback(() => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
@@ -31,7 +31,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
         reader.readAsDataURL(file);
       }
     };
-  };
+  }, []);
 
   const modules = useMemo(() => ({
     toolbar: {
@@ -57,7 +57,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
         }]
       ]
     }
-  }), []);
+  }), [imageHandler]);
 
   // Handle paste events to support image pasting
   useEffect(() => {
