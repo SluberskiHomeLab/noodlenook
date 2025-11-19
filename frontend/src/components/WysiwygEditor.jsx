@@ -2,6 +2,10 @@ import React, { useRef, useMemo, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
+/**
+ * WYSIWYG Editor component with image paste support
+ * Supports pasting images from clipboard and uploading via toolbar
+ */
 function WysiwygEditor({ value, onChange, disabled }) {
   const quillRef = useRef(null);
 
