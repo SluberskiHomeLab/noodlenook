@@ -12,6 +12,7 @@ function SettingsPage() {
 
   // Display Settings
   const [defaultSortOrder, setDefaultSortOrder] = useState('alphabetical');
+  const [showSortDropdown, setShowSortDropdown] = useState(true);
 
   // Workflow Settings
   const [approvalWorkflowEnabled, setApprovalWorkflowEnabled] = useState(false);
@@ -47,6 +48,7 @@ function SettingsPage() {
 
       // Load Display settings
       setDefaultSortOrder(settingsMap['default_sort_order'] || 'alphabetical');
+      setShowSortDropdown(settingsMap['show_sort_dropdown'] !== 'false');
 
       // Load Workflow settings
       setApprovalWorkflowEnabled(settingsMap['approval_workflow_enabled'] === 'true');
@@ -76,6 +78,7 @@ function SettingsPage() {
 
     try {
       await settingsApi.update('default_sort_order', defaultSortOrder, false);
+      await settingsApi.update('show_sort_dropdown', showSortDropdown.toString(), false);
 
       setSuccess('Display settings saved successfully');
       setTimeout(() => setSuccess(''), 3000);
@@ -386,6 +389,38 @@ function SettingsPage() {
                   This setting determines how pages are organized in the sidebar for all users. 
                   Users can still temporarily change the sort order for their session, but this will be the default.
                 </div>
+              </div>
+
+              <div>
+                <label style={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  color: 'var(--text-primary)'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={showSortDropdown}
+                    onChange={(e) => setShowSortDropdown(e.target.checked)}
+                    style={{
+                      width: '1.25rem',
+                      height: '1.25rem',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  Show Sorting Dropdown to Users
+                </label>
+                <p style={{ 
+                  fontSize: '0.875rem', 
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.5rem',
+                  marginLeft: '2rem'
+                }}>
+                  When enabled, users will be able to see and use the sorting dropdown in the sidebar to change page sort order. 
+                  When disabled, the sorting dropdown will be hidden and users will only see pages in the default sort order.
+                </p>
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem' }}>

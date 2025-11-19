@@ -12,9 +12,11 @@ function Sidebar() {
   const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [draggedPage, setDraggedPage] = useState(null);
   const [sortInitialized, setSortInitialized] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(true);
 
   useEffect(() => {
     loadDefaultSortOrder();
+    loadSortDropdownSetting();
     loadPages();
   }, []);
 
@@ -40,6 +42,18 @@ function Sidebar() {
       setSortBy(saved || DEFAULT_SORT);
       setSortInitialized(true);
       console.log('Using default sort order');
+    }
+  };
+
+  const loadSortDropdownSetting = async () => {
+    try {
+      const response = await settings.getPublic('show_sort_dropdown');
+      const showDropdown = response.data.value !== 'false';
+      setShowSortDropdown(showDropdown);
+    } catch (error) {
+      // If setting doesn't exist or error occurs, default to true
+      setShowSortDropdown(true);
+      console.log('Using default sort dropdown setting');
     }
   };
 
@@ -322,48 +336,52 @@ function Sidebar() {
             >
               <List size={14} />
             </button>
-            <button
-              onClick={() => changeTocStyle('nested')}
-              className={tocStyle === 'nested' ? 'btn-primary' : 'btn-secondary'}
-              style={{ padding: '0.25rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
-              title="Grouped view"
-            >
-              A-Z
-            </button>
+            {sortBy !== 'custom' && (
+              <button
+                onClick={() => changeTocStyle('nested')}
+                className={tocStyle === 'nested' ? 'btn-primary' : 'btn-secondary'}
+                style={{ padding: '0.25rem', fontSize: '0.75rem', borderRadius: '0.5rem' }}
+                title="Grouped view"
+              >
+                A-Z
+              </button>
+            )}
           </div>
         </div>
 
-        <div style={{ marginBottom: '0.75rem' }}>
-          <label style={{ 
-            fontSize: '0.75rem', 
-            color: 'var(--text-secondary)', 
-            marginBottom: '0.25rem',
-            display: 'block'
-          }}>
-            Sort by:
-          </label>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '0.4rem',
-              borderRadius: '0.5rem',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'var(--bg-secondary)',
-              color: 'var(--text-primary)',
-              fontSize: '0.875rem',
-            }}
-          >
-            <option value="alphabetical">Alphabetical</option>
-            <option value="category">Category</option>
-            <option value="recent">Recently Created</option>
-            <option value="creator">Creator</option>
-            {user && user.role === 'admin' && (
-              <option value="custom">Custom Order (Drag)</option>
-            )}
-          </select>
-        </div>
+        {showSortDropdown && (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <label style={{ 
+              fontSize: '0.75rem', 
+              color: 'var(--text-secondary)', 
+              marginBottom: '0.25rem',
+              display: 'block'
+            }}>
+              Sort by:
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.4rem',
+                borderRadius: '0.5rem',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-secondary)',
+                color: 'var(--text-primary)',
+                fontSize: '0.875rem',
+              }}
+            >
+              <option value="alphabetical">Alphabetical</option>
+              <option value="category">Category</option>
+              <option value="recent">Recently Created</option>
+              <option value="creator">Creator</option>
+              {user && user.role === 'admin' && (
+                <option value="custom">Custom Order (Drag)</option>
+              )}
+            </select>
+          </div>
+        )}
 
         {loading ? (
           <div style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem 0' }}>

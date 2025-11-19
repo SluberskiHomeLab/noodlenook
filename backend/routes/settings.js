@@ -7,7 +7,8 @@ const router = express.Router();
 
 // Default values for settings
 const DEFAULT_VALUES = {
-  default_sort_order: 'alphabetical'
+  default_sort_order: 'alphabetical',
+  show_sort_dropdown: 'true'
 };
 
 // Get all settings (admin only)
@@ -63,7 +64,7 @@ router.get('/public/:key', authenticateToken, async (req, res) => {
     const { key } = req.params;
     
     // List of settings that are public (non-sensitive)
-    const publicSettings = ['default_sort_order'];
+    const publicSettings = ['default_sort_order', 'show_sort_dropdown'];
     
     if (!publicSettings.includes(key)) {
       return res.status(403).json({ error: 'This setting is not publicly accessible' });
