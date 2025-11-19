@@ -1,5 +1,5 @@
 import React, { useRef, useMemo, useEffect } from 'react';
-import ReactQuill from 'react-quill';
+import ReactQuill, { Quill } from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
 /**
@@ -59,42 +59,53 @@ function WysiwygEditor({ value, onChange, disabled }) {
     }
   }), [imageHandler]);
 
-  // Handle paste events to support image pasting
+  // Handle paste events to support image pasting from clipboard
   useEffect(() => {
     const quill = quillRef.current?.getEditor();
     if (!quill) return;
 
     const handlePaste = (e) => {
+      // Get clipboard data
       const clipboardData = e.clipboardData || window.clipboardData;
-      const items = clipboardData?.items;
+      if (!clipboardData) return;
 
+      const items = clipboardData.items;
       if (!items) return;
 
-      // Check if clipboard contains an image
+      // Look for image data in clipboard
+      let hasImage = false;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
+          hasImage = true;
+          // Prevent Quill's default paste handling for images
           e.preventDefault();
+          e.stopPropagation();
           
           const file = items[i].getAsFile();
-          const reader = new FileReader();
-
-          reader.onload = (event) => {
-            const range = quill.getSelection(true);
-            quill.insertEmbed(range.index, 'image', event.target.result);
-            quill.setSelection(range.index + 1);
-          };
-
-          reader.readAsDataURL(file);
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const range = quill.getSelection(true) || quill.getSelection() || { index: 0 };
+              // Insert image as base64 data URL
+              quill.insertEmbed(range.index, 'image', event.target.result);
+              // Move cursor after the image
+              quill.setSelection(range.index + 1);
+            };
+            reader.readAsDataURL(file);
+          }
           break;
         }
       }
     };
 
-    const editorElement = quill.root;
-    editorElement.addEventListener('paste', handlePaste);
+    // Get the editor container element
+    const editorContainer = quill.root;
+    
+    // Add paste listener with capture phase to intercept before Quill processes it
+    editorContainer.addEventListener('paste', handlePaste, true);
 
     return () => {
-      editorElement.removeEventListener('paste', handlePaste);
+      editorContainer.removeEventListener('paste', handlePaste, true);
     };
   }, []);
 
