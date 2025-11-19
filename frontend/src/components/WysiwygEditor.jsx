@@ -1,5 +1,5 @@
-import React, { useRef, useMemo, useEffect } from 'react';
-import ReactQuill, { Quill } from 'react-quill';
+import React, { useRef, useMemo, useEffect, useCallback } from 'react';
+import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
 /**
@@ -10,7 +10,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
   const quillRef = useRef(null);
 
   // Custom image handler for the toolbar button
-  const imageHandler = React.useCallback(() => {
+  const imageHandler = useCallback(() => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
@@ -73,10 +73,8 @@ function WysiwygEditor({ value, onChange, disabled }) {
       if (!items) return;
 
       // Look for image data in clipboard
-      let hasImage = false;
       for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
-          hasImage = true;
           // Prevent Quill's default paste handling for images
           e.preventDefault();
           e.stopPropagation();
@@ -85,14 +83,18 @@ function WysiwygEditor({ value, onChange, disabled }) {
           if (file) {
             const reader = new FileReader();
             reader.onload = (event) => {
-              const range = quill.getSelection(true) || quill.getSelection() || { index: 0 };
+              // Get current selection or insert at the beginning
+              const range = quill.getSelection(true) || quill.getSelection();
+              const index = range ? range.index : 0;
+              
               // Insert image as base64 data URL
-              quill.insertEmbed(range.index, 'image', event.target.result);
+              quill.insertEmbed(index, 'image', event.target.result);
               // Move cursor after the image
-              quill.setSelection(range.index + 1);
+              quill.setSelection(index + 1);
             };
             reader.readAsDataURL(file);
           }
+          // Only process the first image found
           break;
         }
       }
@@ -102,10 +104,10 @@ function WysiwygEditor({ value, onChange, disabled }) {
     const editorContainer = quill.root;
     
     // Add paste listener with capture phase to intercept before Quill processes it
-    editorContainer.addEventListener('paste', handlePaste, true);
+    editorContainer.addEventListener('paste', handlePaste, { capture: true });
 
     return () => {
-      editorContainer.removeEventListener('paste', handlePaste, true);
+      editorContainer.removeEventListener('paste', handlePaste, { capture: true });
     };
   }, []);
 
