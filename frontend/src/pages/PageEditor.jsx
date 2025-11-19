@@ -114,8 +114,15 @@ function PageEditor() {
           navigate(`/page/${pageSlug}`);
         }
       } else {
-        await pages.create({ title, slug: pageSlug, content, content_type: contentType, category, is_public: isPublic });
-        navigate(`/page/${pageSlug}`);
+        const response = await pages.create({ title, slug: pageSlug, content, content_type: contentType, category, is_public: isPublic });
+        
+        // Check if page creation requires approval
+        if (response.data.requires_approval) {
+          alert('Your page has been created and submitted for approval. An admin will review it before it is published.');
+          navigate('/');
+        } else {
+          navigate(`/page/${pageSlug}`);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save page');
