@@ -222,7 +222,7 @@ function PendingEditDetail() {
               {edit.current_content_type === 'markdown' ? (
                 <ReactMarkdown>{edit.current_content}</ReactMarkdown>
               ) : (
-                <div dangerouslySetInnerHTML={{ __html: edit.current_content }} />
+                <div className="markdown-content" dangerouslySetInnerHTML={{ __html: edit.current_content }} />
               )}
             </div>
           </div>
@@ -244,7 +244,7 @@ function PendingEditDetail() {
               {edit.content_type === 'markdown' ? (
                 <ReactMarkdown>{edit.content}</ReactMarkdown>
               ) : (
-                <div dangerouslySetInnerHTML={{ __html: edit.content }} />
+                <div className="markdown-content" dangerouslySetInnerHTML={{ __html: edit.content }} />
               )}
             </div>
           </div>
@@ -267,7 +267,7 @@ function PendingEditDetail() {
             {edit.content_type === 'markdown' ? (
               <ReactMarkdown>{edit.content}</ReactMarkdown>
             ) : (
-              <div dangerouslySetInnerHTML={{ __html: edit.content }} />
+              <div className="markdown-content" dangerouslySetInnerHTML={{ __html: edit.content }} />
             )}
           </div>
         </div>

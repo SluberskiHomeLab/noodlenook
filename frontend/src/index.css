@@ -237,3 +237,65 @@ textarea:focus {
   margin: 1rem 0;
   color: var(--text-secondary);
 }
+
+/* Quill Editor Styles */
+.ql-toolbar {
+  background-color: var(--bg-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+.ql-container {
+  background-color: var(--bg-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-top: none !important;
+  border-radius: 0 0 0.5rem 0.5rem !important;
+  min-height: 400px;
+  font-size: 1rem !important;
+}
+
+.ql-editor {
+  color: var(--text-primary) !important;
+  min-height: 400px;
+  line-height: 1.6;
+}
+
+.ql-editor.ql-blank::before {
+  color: var(--text-secondary) !important;
+  font-style: italic;
+}
+
+.ql-snow .ql-stroke {
+  stroke: var(--text-primary) !important;
+}
+
+.ql-snow .ql-fill {
+  fill: var(--text-primary) !important;
+}
+
+.ql-snow .ql-picker-label {
+  color: var(--text-primary) !important;
+}
+
+.ql-toolbar button:hover,
+.ql-toolbar button:focus {
+  background-color: var(--bg-tertiary) !important;
+}
+
+.ql-toolbar button.ql-active {
+  background-color: var(--bg-tertiary) !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-stroke,
+.ql-snow .ql-toolbar button:hover .ql-stroke,
+.ql-snow.ql-toolbar button.ql-active .ql-stroke,
+.ql-snow .ql-toolbar button.ql-active .ql-stroke {
+  stroke: var(--primary-color) !important;
+}
+
+.ql-snow.ql-toolbar button:hover .ql-fill,
+.ql-snow .ql-toolbar button:hover .ql-fill,
+.ql-snow.ql-toolbar button.ql-active .ql-fill,
+.ql-snow .ql-toolbar button.ql-active .ql-fill {
+  fill: var(--primary-color) !important;
+}

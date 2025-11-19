@@ -126,7 +126,7 @@ function PageView() {
         </div>
 
         <div className="markdown-content">
-          {page.content_type === 'html' ? (
+          {(page.content_type === 'html' || page.content_type === 'wysiwyg') ? (
             <div dangerouslySetInnerHTML={{ __html: page.content }} />
           ) : (
             <ReactMarkdown>{page.content}</ReactMarkdown>
