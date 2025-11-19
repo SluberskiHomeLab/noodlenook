@@ -74,7 +74,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
 
       // Look for image data in clipboard
       for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
+        if (items[i].type.startsWith('image/')) {
           // Prevent Quill's default paste handling for images
           e.preventDefault();
           e.stopPropagation();
@@ -84,7 +84,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
             const reader = new FileReader();
             reader.onload = (event) => {
               // Get current selection or insert at the beginning
-              const range = quill.getSelection(true) || quill.getSelection();
+              const range = quill.getSelection(true);
               const index = range ? range.index : 0;
               
               // Insert image as base64 data URL
