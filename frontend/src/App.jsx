@@ -15,6 +15,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import SettingsPage from './pages/SettingsPage';
 import PendingEdits from './pages/PendingEdits';
 import PendingEditDetail from './pages/PendingEditDetail';
+import UnpublishedPages from './pages/UnpublishedPages';
 
 import { auth } from './utils/api';
 
@@ -185,6 +186,14 @@ function App() {
                   element={
                     user && (user.role === 'editor' || user.role === 'admin')
                       ? <PendingEditDetail /> 
+                      : <Navigate to="/" />
+                  } 
+                />
+                <Route 
+                  path="/unpublished-pages" 
+                  element={
+                    user && (user.role === 'editor' || user.role === 'admin')
+                      ? <UnpublishedPages /> 
                       : <Navigate to="/" />
                   } 
                 />

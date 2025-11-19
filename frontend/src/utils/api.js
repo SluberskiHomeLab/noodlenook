@@ -26,6 +26,9 @@ export const pages = {
   update: (slug, data) => api.put(`/pages/${slug}`, data),
   delete: (slug) => api.delete(`/pages/${slug}`),
   updateOrder: (slug, display_order) => api.put(`/pages/order/${slug}`, { display_order }),
+  getUnpublished: () => api.get('/pages/unpublished/list'),
+  publish: (slug) => api.post(`/pages/${slug}/publish`),
+  reject: (slug, reason) => api.post(`/pages/${slug}/reject`, { reason }),
 };
 
 export const search = {

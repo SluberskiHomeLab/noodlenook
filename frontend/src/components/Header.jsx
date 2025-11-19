@@ -13,7 +13,8 @@ import {
   PanelLeftClose,
   PanelRightClose,
   PanelTopClose,
-  GitBranch
+  GitBranch,
+  FileQuestion
 } from 'lucide-react';
 
 function Header() {
@@ -173,12 +174,20 @@ function Header() {
               {user.username} ({user.role})
             </span>
             {(user.role === 'editor' || user.role === 'admin') && (
-              <Link to="/pending-edits">
-                <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <GitBranch size={16} />
-                  Pending Edits
-                </button>
-              </Link>
+              <>
+                <Link to="/pending-edits">
+                  <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <GitBranch size={16} />
+                    Pending Edits
+                  </button>
+                </Link>
+                <Link to="/unpublished-pages">
+                  <button className="btn-secondary" style={{ padding: '0.5rem 1rem', borderRadius: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <FileQuestion size={16} />
+                    Unpublished
+                  </button>
+                </Link>
+              </>
             )}
             {user.role === 'admin' && (
               <Link to="/admin">
