@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, useCallback } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -10,7 +10,7 @@ function WysiwygEditor({ value, onChange, disabled }) {
   const quillRef = useRef(null);
 
   // Custom image handler for the toolbar button
-  const imageHandler = React.useCallback(() => {
+  const imageHandler = useCallback(() => {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
@@ -59,42 +59,55 @@ function WysiwygEditor({ value, onChange, disabled }) {
     }
   }), [imageHandler]);
 
-  // Handle paste events to support image pasting
+  // Handle paste events to support image pasting from clipboard
   useEffect(() => {
     const quill = quillRef.current?.getEditor();
     if (!quill) return;
 
     const handlePaste = (e) => {
+      // Get clipboard data
       const clipboardData = e.clipboardData || window.clipboardData;
-      const items = clipboardData?.items;
+      if (!clipboardData) return;
 
+      const items = clipboardData.items;
       if (!items) return;
 
-      // Check if clipboard contains an image
+      // Look for image data in clipboard
       for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
+        if (items[i].type.startsWith('image/')) {
+          // Prevent Quill's default paste handling for images
           e.preventDefault();
+          e.stopPropagation();
           
           const file = items[i].getAsFile();
-          const reader = new FileReader();
-
-          reader.onload = (event) => {
-            const range = quill.getSelection(true);
-            quill.insertEmbed(range.index, 'image', event.target.result);
-            quill.setSelection(range.index + 1);
-          };
-
-          reader.readAsDataURL(file);
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              // Get current selection or insert at the beginning
+              const range = quill.getSelection(true);
+              const index = range ? range.index : 0;
+              
+              // Insert image as base64 data URL
+              quill.insertEmbed(index, 'image', event.target.result);
+              // Move cursor after the image
+              quill.setSelection(index + 1);
+            };
+            reader.readAsDataURL(file);
+          }
+          // Only process the first image found
           break;
         }
       }
     };
 
-    const editorElement = quill.root;
-    editorElement.addEventListener('paste', handlePaste);
+    // Get the editor container element
+    const editorContainer = quill.root;
+    
+    // Add paste listener with capture phase to intercept before Quill processes it
+    editorContainer.addEventListener('paste', handlePaste, { capture: true });
 
     return () => {
-      editorElement.removeEventListener('paste', handlePaste);
+      editorContainer.removeEventListener('paste', handlePaste, { capture: true });
     };
   }, []);
 
