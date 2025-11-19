@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Save, X, FileText, Type } from 'lucide-react';
 import { pages } from '../utils/api';
 import MarkdownToolbar from '../components/MarkdownToolbar';
-import RichTextToolbar from '../components/RichTextToolbar';
+import WysiwygEditor from '../components/WysiwygEditor';
+import { markdownToHtml, htmlToMarkdown } from '../utils/contentConverter';
 
 function PageEditor() {
   const { slug } = useParams();
@@ -33,7 +34,8 @@ function PageEditor() {
       setTitle(page.title);
       setContent(page.content);
       setPageSlug(page.slug);
-      setContentType(page.content_type);
+      // Convert old 'html' content type to 'wysiwyg'
+      setContentType(page.content_type === 'html' ? 'wysiwyg' : page.content_type);
       setCategory(page.category || '');
       setIsPublic(page.is_public || false);
     } catch (err) {
@@ -46,6 +48,23 @@ function PageEditor() {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
+  };
+
+  const handleContentTypeChange = (newType) => {
+    if (newType === contentType) return;
+
+    // Convert content when switching modes
+    if (newType === 'wysiwyg' && contentType === 'markdown') {
+      // Converting from Markdown to WYSIWYG
+      const htmlContent = markdownToHtml(content);
+      setContent(htmlContent);
+    } else if (newType === 'markdown' && contentType === 'wysiwyg') {
+      // Converting from WYSIWYG to Markdown
+      const markdownContent = htmlToMarkdown(content);
+      setContent(markdownContent);
+    }
+    
+    setContentType(newType);
   };
 
   const handleTitleChange = (e) => {
@@ -122,7 +141,7 @@ function PageEditor() {
 
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             <button
-              onClick={() => setContentType('markdown')}
+              onClick={() => handleContentTypeChange('markdown')}
               className={contentType === 'markdown' ? 'btn-primary' : 'btn-secondary'}
               style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
@@ -130,12 +149,12 @@ function PageEditor() {
               Markdown
             </button>
             <button
-              onClick={() => setContentType('html')}
-              className={contentType === 'html' ? 'btn-primary' : 'btn-secondary'}
+              onClick={() => handleContentTypeChange('wysiwyg')}
+              className={contentType === 'wysiwyg' ? 'btn-primary' : 'btn-secondary'}
               style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
             >
               <Type size={18} />
-              Rich Text
+              WYSIWYG
             </button>
           </div>
         </div>
@@ -255,33 +274,36 @@ function PageEditor() {
             }}>
               Content
             </label>
-            {contentType === 'markdown' && <MarkdownToolbar onInsert={handleInsert} />}
-            {contentType === 'html' && <RichTextToolbar onInsert={handleInsert} />}
-            <textarea
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              required
-              disabled={loading}
-              placeholder={
-                contentType === 'markdown' 
-                  ? 'Write in Markdown...\n\n# Heading\n\nParagraph text...' 
-                  : 'Write your content...'
-              }
-              style={{ 
-                minHeight: '400px',
-                fontFamily: contentType === 'markdown' ? 'monospace' : 'inherit',
-                fontSize: contentType === 'markdown' ? '0.875rem' : '1rem'
-              }}
-            />
-            {contentType === 'markdown' && (
-              <div style={{ 
-                fontSize: '0.75rem', 
-                color: 'var(--text-secondary)',
-                marginTop: '0.5rem'
-              }}>
-                Supports Markdown syntax: **bold**, *italic*, # headings, [links](url), etc.
-              </div>
+            {contentType === 'markdown' ? (
+              <>
+                <MarkdownToolbar onInsert={handleInsert} />
+                <textarea
+                  ref={textareaRef}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required
+                  disabled={loading}
+                  placeholder='Write in Markdown...\n\n# Heading\n\nParagraph text...'
+                  style={{ 
+                    minHeight: '400px',
+                    fontFamily: 'monospace',
+                    fontSize: '0.875rem'
+                  }}
+                />
+                <div style={{ 
+                  fontSize: '0.75rem', 
+                  color: 'var(--text-secondary)',
+                  marginTop: '0.5rem'
+                }}>
+                  Supports Markdown syntax: **bold**, *italic*, # headings, [links](url), etc.
+                </div>
+              </>
+            ) : (
+              <WysiwygEditor
+                value={content}
+                onChange={setContent}
+                disabled={loading}
+              />
             )}
           </div>
 
