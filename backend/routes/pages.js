@@ -45,17 +45,47 @@ router.get('/', async (req, res) => {
 // Get single page by slug
 router.get('/:slug', async (req, res) => {
   try {
-    const authenticated = isAuthenticated(req);
+    // Try to get user info if authenticated
+    let user = null;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (token) {
+      try {
+        user = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-production');
+      } catch (err) {
+        // Invalid token, continue as unauthenticated
+      }
+    }
 
-    // If authenticated, show all published pages. If not, show only public pages.
-    const whereClause = authenticated ? 'p.slug = $1 AND p.is_published = true' : 'p.slug = $1 AND p.is_published = true AND p.is_public = true';
+    // Build query based on authentication and permissions
+    let whereClause;
+    let params = [req.params.slug];
+    
+    if (user) {
+      // Authenticated users
+      if (user.role === 'admin') {
+        // Admins can see all pages (published and unpublished)
+        whereClause = 'p.slug = $1';
+      } else if (user.role === 'editor') {
+        // Editors can see published pages and their own unpublished pages
+        whereClause = 'p.slug = $1 AND (p.is_published = true OR p.author_id = $2)';
+        params.push(user.id);
+      } else {
+        // Viewers can only see published pages
+        whereClause = 'p.slug = $1 AND p.is_published = true';
+      }
+    } else {
+      // Unauthenticated users can only see published and public pages
+      whereClause = 'p.slug = $1 AND p.is_published = true AND p.is_public = true';
+    }
     
     const result = await pool.query(`
       SELECT p.*, u.username as author_name 
       FROM pages p 
       LEFT JOIN users u ON p.author_id = u.id 
       WHERE ${whereClause}
-    `, [req.params.slug]);
+    `, params);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Page not found' });
@@ -83,12 +113,33 @@ router.post('/', authenticateToken, authorizeRole('editor', 'admin'), async (req
       return res.status(400).json({ error: 'Slug already exists' });
     }
 
-    const result = await pool.query(
-      `INSERT INTO pages (title, slug, content, content_type, category, is_public, author_id) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
-       RETURNING *`,
-      [title, slug, content, content_type || 'markdown', category || null, is_public || false, req.user.id]
+    // Check if approval workflow is enabled
+    const approvalSetting = await pool.query(
+      'SELECT value FROM system_settings WHERE key = $1',
+      ['approval_workflow_enabled']
     );
+
+    const approvalEnabled = approvalSetting.rows.length > 0 && approvalSetting.rows[0].value === 'true';
+
+    // Determine if page should be published
+    // If user is editor and approval workflow is enabled, create as unpublished (requires admin approval)
+    // Admins can always publish directly
+    const shouldPublish = req.user.role === 'admin' || !approvalEnabled;
+
+    const result = await pool.query(
+      `INSERT INTO pages (title, slug, content, content_type, category, is_public, is_published, author_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+       RETURNING *`,
+      [title, slug, content, content_type || 'markdown', category || null, is_public || false, shouldPublish, req.user.id]
+    );
+
+    if (!shouldPublish) {
+      return res.status(201).json({ 
+        ...result.rows[0],
+        message: 'Page created and submitted for approval',
+        requires_approval: true
+      });
+    }
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
@@ -215,6 +266,99 @@ router.put('/order/:slug', authenticateToken, authorizeRole('admin'), async (req
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error updating page order:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Get unpublished pages (admin only - for approval, editor - their own)
+router.get('/unpublished/list', authenticateToken, async (req, res) => {
+  try {
+    let query;
+    let params = [];
+
+    // Admins see all unpublished pages, editors see only their own
+    if (req.user.role === 'admin') {
+      query = `
+        SELECT p.*, u.username as author_name 
+        FROM pages p 
+        LEFT JOIN users u ON p.author_id = u.id 
+        WHERE p.is_published = false
+        ORDER BY p.created_at DESC
+      `;
+    } else if (req.user.role === 'editor') {
+      query = `
+        SELECT p.*, u.username as author_name 
+        FROM pages p 
+        LEFT JOIN users u ON p.author_id = u.id 
+        WHERE p.is_published = false AND p.author_id = $1
+        ORDER BY p.created_at DESC
+      `;
+      params = [req.user.id];
+    } else {
+      // Viewers cannot see unpublished pages
+      return res.json([]);
+    }
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching unpublished pages:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Publish an unpublished page (admin only)
+router.post('/:slug/publish', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE pages 
+       SET is_published = true, updated_at = CURRENT_TIMESTAMP 
+       WHERE slug = $1 AND is_published = false
+       RETURNING *`,
+      [req.params.slug]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Unpublished page not found' });
+    }
+
+    res.json({ 
+      message: 'Page published successfully',
+      page: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error publishing page:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reject an unpublished page (admin only)
+router.post('/:slug/reject', authenticateToken, authorizeRole('admin'), async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    // Get the page first to return info to the user
+    const page = await pool.query(
+      'SELECT * FROM pages WHERE slug = $1 AND is_published = false',
+      [req.params.slug]
+    );
+
+    if (page.rows.length === 0) {
+      return res.status(404).json({ error: 'Unpublished page not found' });
+    }
+
+    // Delete the rejected page
+    await pool.query(
+      'DELETE FROM pages WHERE slug = $1',
+      [req.params.slug]
+    );
+
+    res.json({ 
+      message: 'Page rejected and deleted',
+      reason: reason || 'No reason provided'
+    });
+  } catch (error) {
+    console.error('Error rejecting page:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
