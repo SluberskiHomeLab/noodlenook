@@ -386,8 +386,8 @@ function SettingsPage() {
                   color: 'var(--text-secondary)',
                   marginTop: '0.5rem'
                 }}>
-                  This setting determines how pages are organized in the sidebar for all users. 
-                  Users can still temporarily change the sort order for their session, but this will be the default.
+                  This setting determines how pages are organized in the sidebar for all users (including non-logged-in users). 
+                  Users can still temporarily change the sort order for their session if the sort dropdown is enabled, but this will be the default.
                 </div>
               </div>
 
@@ -418,8 +418,8 @@ function SettingsPage() {
                   marginTop: '0.5rem',
                   marginLeft: '2rem'
                 }}>
-                  When enabled, users will be able to see and use the sorting dropdown in the sidebar to change page sort order. 
-                  When disabled, the sorting dropdown will be hidden and users will only see pages in the default sort order.
+                  When enabled, all users (including non-logged-in users) will be able to see and use the sorting dropdown in the sidebar to change page sort order. 
+                  When disabled, the sorting dropdown will be hidden for everyone and users will only see pages in the default sort order.
                 </p>
               </div>
 

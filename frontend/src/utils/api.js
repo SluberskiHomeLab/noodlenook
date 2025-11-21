@@ -13,6 +13,11 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Create a separate API instance for public endpoints (no auth token)
+const publicApi = axios.create({
+  baseURL: '/api',
+});
+
 export const auth = {
   login: (username, password) => api.post('/auth/login', { username, password }),
   register: (username, email, password, invitation_token) => api.post('/auth/register', { username, email, password, invitation_token }),
@@ -51,7 +56,7 @@ export const invitations = {
 export const settings = {
   getAll: () => api.get('/settings'),
   get: (key) => api.get(`/settings/${key}`),
-  getPublic: (key) => api.get(`/settings/public/${key}`),
+  getPublic: (key) => publicApi.get(`/settings/public/${key}`),
   update: (key, value, encrypted) => api.put(`/settings/${key}`, { value, encrypted }),
   delete: (key) => api.delete(`/settings/${key}`),
   testSmtp: (config) => api.post('/settings/test-smtp', config),
