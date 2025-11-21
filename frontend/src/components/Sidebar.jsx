@@ -21,9 +21,12 @@ function Sidebar() {
     loadPages();
   }, []);
 
-  // Reload pages when navigating to ensure sidebar shows latest pages
+  // Reload pages when navigating to ensure sidebar shows latest pages after edits/creates
   useEffect(() => {
-    loadPages();
+    // Skip the initial load (handled by the first useEffect)
+    if (allPages.length > 0) {
+      loadPages();
+    }
   }, [location.pathname]);
 
   useEffect(() => {
@@ -64,6 +67,7 @@ function Sidebar() {
   };
 
   const loadPages = async () => {
+    setLoading(true);
     try {
       const response = await pages.getAll();
       setAllPages(response.data);
