@@ -18,6 +18,8 @@ function PageView() {
   }, [slug]);
 
   const loadPage = async () => {
+    setLoading(true);
+    setError('');
     try {
       const response = await pages.getBySlug(slug);
       setPage(response.data);

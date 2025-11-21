@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { FileText, Plus, Home, List, FolderOpen, Clock, User, GripVertical } from 'lucide-react';
 import { pages, settings } from '../utils/api';
 import { useApp } from '../App';
@@ -13,12 +13,21 @@ function Sidebar() {
   const [draggedPage, setDraggedPage] = useState(null);
   const [sortInitialized, setSortInitialized] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     loadDefaultSortOrder();
     loadSortDropdownSetting();
     loadPages();
   }, []);
+
+  // Reload pages when navigating to ensure sidebar shows latest pages after edits/creates
+  useEffect(() => {
+    // Skip the initial load (handled by the first useEffect)
+    if (allPages.length > 0) {
+      loadPages();
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     // Only save to localStorage after initial load is complete
@@ -58,6 +67,7 @@ function Sidebar() {
   };
 
   const loadPages = async () => {
+    setLoading(true);
     try {
       const response = await pages.getAll();
       setAllPages(response.data);

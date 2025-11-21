@@ -10,6 +10,8 @@ function Dashboard() {
   const { user } = useApp();
 
   useEffect(() => {
+    // Reload pages when dashboard is shown to ensure fresh data
+    setLoading(true);
     loadPages();
   }, []);
 
