@@ -58,8 +58,8 @@ router.get('/:key', authenticateToken, authorizeRole('admin'), async (req, res) 
   }
 });
 
-// Get public settings (accessible to all authenticated users)
-router.get('/public/:key', authenticateToken, async (req, res) => {
+// Get public settings (accessible to all users, including non-authenticated)
+router.get('/public/:key', async (req, res) => {
   try {
     const { key } = req.params;
     
