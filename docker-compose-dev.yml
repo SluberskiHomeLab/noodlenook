@@ -17,7 +17,9 @@ services:
       retries: 5
 
   backend:
-    image: sluberskihomelab/noodlenook-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: noodlenook-backend
     environment:
       PORT: 3001
@@ -35,7 +37,9 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: sluberskihomelab/noodlenook-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: noodlenook-frontend
     ports:
       - "3000:3000"

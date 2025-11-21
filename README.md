@@ -63,6 +63,59 @@ docker-compose down
 docker-compose up -d --build
 ```
 
+## 🐳 Docker Compose Files
+
+NoodleNook provides two Docker Compose configurations for different use cases:
+
+### `docker-compose.yml` - Production/Quick Start (Recommended)
+**Use this for**: Running the application with pre-built images from Docker Hub
+
+This is the **recommended** option for most users who want to quickly run NoodleNook without building from source.
+
+```bash
+# Start the application with pre-built images
+docker-compose up -d
+
+# Stop the application
+docker-compose down
+
+# Update to the latest images
+docker-compose pull
+docker-compose up -d
+```
+
+**Advantages**:
+- ✅ Fastest startup time
+- ✅ No build requirements
+- ✅ Uses tested, published images
+- ✅ Perfect for production deployments
+
+### `docker-compose-dev.yml` - Development/Local Builds
+**Use this for**: Development work or when you need to build from source
+
+This configuration builds the frontend and backend images from the local source code.
+
+```bash
+# Start the application with local builds
+docker-compose -f docker-compose-dev.yml up -d
+
+# Rebuild and restart after code changes
+docker-compose -f docker-compose-dev.yml up -d --build
+
+# Stop the application
+docker-compose -f docker-compose-dev.yml down
+```
+
+**Advantages**:
+- ✅ Build from source code
+- ✅ Test local modifications
+- ✅ Development and debugging
+- ✅ No dependency on Docker Hub
+
+**When to use each**:
+- **For most users**: Use `docker-compose.yml` (no `-f` flag needed)
+- **For developers**: Use `docker-compose-dev.yml` when making code changes
+
 ## 🏗️ Architecture
 
 ### Backend (Node.js/Express)
